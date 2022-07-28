@@ -25,7 +25,7 @@ function getjacobian end
 Update prescribed values, external loads etc. for the given time
 Called in the beginning of each new time step. 
 Note: For adaptive time stepping, it may be called with a lower 
-time than the previous time if the solution did not converge. 
+time than the previous time if the solution did not converge.
 """
 function update_to_next_step! end
 
@@ -55,9 +55,9 @@ Only called directly after the problem has converged.
 function handle_converged! end
 
 """
-    postprocess(problem, step)
+    postprocess!(problem, step)
 
 Perform any postprocessing at the current time and step nr `step`
 Called after time step converged, and after `handle_converged!`
 """
-function postprocess end
+function postprocess! end

@@ -27,6 +27,7 @@ struct NewtonSolver{T}
     numiter::Vector{Int}  # Last step number of iterations
     residuals::Vector{T}  # Last step residual history
 end
+
 function NewtonSolver(;maxiter=10, tolerance=1.e-6)
     residuals = zeros(typeof(tolerance), maxiter+1)
     return NewtonSolver(maxiter, tolerance, [zero(maxiter)], residuals)
@@ -50,21 +51,26 @@ function print_solver(s::NewtonSolver)
 end
 
 struct FixedTimeStepper{T}
-    Δt::T
-    num_steps::Int
-    t_start::T
+    t::Vector{T}
 end
-initial_time(ts::FixedTimeStepper) = ts.t_start
-isfinished(ts::FixedTimeStepper, _, step) = step > ts.num_steps
+function FixedTimeStepper(num_steps::Int, Δt=1, t_start=0)
+    return FixedTimeStepper(t_start .+ collect(0:Δt:((num_steps-1)*Δt)))
+end
+
+initial_time(ts::FixedTimeStepper) = first(ts.t)
+islaststep(ts::FixedTimeStepper, _, step) = step >= length(ts.t)
 function update_time!(s::FerriteSolver{<:Any,<:FixedTimeStepper}, t, step, converged)
-    converged || throw(ConvergenceError("nonlinear solve failed and FixedTimeStepper cannot adjust time step"))
-    return t + s.timestepper.Δt, step+1
+    if !converged
+        msg = "nonlinear solve failed and FixedTimeStepper cannot adjust time step"
+        throw(ConvergenceError(msg))
+    end
+    return s.timestepper.t[step+1], step+1
 end
 
 function solve_ferrite_problem!(solver::FerriteSolver{<:NewtonSolver}, problem)
     t = initial_time(solver.timestepper)
     step = 1
-    while !isfinished(solver.timestepper, t, step)
+    while true
         update_to_next_step!(problem, t)
         # Can make improved guess here based on previous values and send to update_problem! 
         # Alternatively, this can be done inside update_loads! by the user if desired. 
@@ -72,10 +78,13 @@ function solve_ferrite_problem!(solver::FerriteSolver{<:NewtonSolver}, problem)
         converged = solve_nonlinear!(solver, problem)
         if converged 
             handle_converged!(problem)
-            postprocess(problem, step)
+            postprocess!(problem, step)
         else
             println("the nonlinear solver didn't converge")
             print_solver(solver.nlsolver)
+        end
+        if islaststep(solver.timestepper, t, step)
+            break
         end
         t, step = update_time!(solver, t, step, converged)
     end
