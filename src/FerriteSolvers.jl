@@ -53,8 +53,8 @@ end
 struct FixedTimeStepper{T}
     t::Vector{T}
 end
-function FixedTimeStepper(num_steps::Int, Δt=1, t_start=0)
-    return FixedTimeStepper(t_start .+ collect(0:Δt:((num_steps-1)*Δt)))
+function FixedTimeStepper(num_steps::Int, Δt=1, t_start=zero(Δt))
+    return FixedTimeStepper(t_start .+ collect(0:Δt:((num_steps)*Δt)))
 end
 
 initial_time(ts::FixedTimeStepper) = first(ts.t)
@@ -70,23 +70,21 @@ end
 function solve_ferrite_problem!(solver::FerriteSolver{<:NewtonSolver}, problem)
     t = initial_time(solver.timestepper)
     step = 1
-    while true
+    converged = true
+    while !islaststep(solver.timestepper, t, step)
+        t, step = update_time!(solver, t, step, converged)
         update_to_next_step!(problem, t)
         # Can make improved guess here based on previous values and send to update_problem! 
         # Alternatively, this can be done inside update_loads! by the user if desired. 
         update_problem!(problem)
         converged = solve_nonlinear!(solver, problem)
-        if converged 
+        if converged
             handle_converged!(problem)
             postprocess!(problem, step)
         else
             println("the nonlinear solver didn't converge")
             print_solver(solver.nlsolver)
         end
-        if islaststep(solver.timestepper, t, step)
-            break
-        end
-        t, step = update_time!(solver, t, step, converged)
     end
 end
 
