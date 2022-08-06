@@ -32,10 +32,14 @@ function update_to_next_step! end
 """
     update_problem!(problem, Δx=0*getunknowns(problem))
 
-Assemble the residual and stiffness for `x+=Δx`. Note that 
-the function must also support only one argument: `problem`,
-this version is called the first time after 
-`update-update_to_next_step!` and should default to `Δx=0`
+Assemble the residual and stiffness for `x+=Δx`. 
+
+- Some linear solvers may be inaccurate, and if modified stiffness is used 
+  to enforce constraints on `x`, it is good the force `Δx=0` on these
+  components inside this function. 
+- Note that the function must also support only one argument: `problem`,
+  this version is called the first time after 
+  `update-update_to_next_step!` and should default to `Δx=0`
 """
 function update_problem! end
 

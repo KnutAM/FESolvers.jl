@@ -25,7 +25,7 @@ for which the following functions should be defined
 ```julia
 x = getunknowns(problem)
 update_to_next_step!(problem, t)# Update boundary conditions etc. for a new time step
-update_problem!(problem, Δx)    # Assemble stiffness and residual for x+=Δx, after ensuring that Δa is zero at Dirichlet BC. 
+update_problem!(problem, Δx)    # Assemble stiffness and residual for x+=Δx 
 calculate_residualnorm(problem) # Get scalar value of residual
 r = getresidual(problem)
 K = getjacobian(problem)        # K = dr/dx
