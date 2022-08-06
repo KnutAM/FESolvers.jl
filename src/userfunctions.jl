@@ -30,10 +30,12 @@ time than the previous time if the solution did not converge.
 function update_to_next_step! end
 
 """
-    update_problem!(problem, Δa=0*getdofvector(problem))
+    update_problem!(problem, Δx=0*getunknowns(problem))
 
-Apply zero change to Dirichlet conditions on Δa
-Assemble the stiffness and residual.
+Assemble the residual and stiffness for `x+=Δx`. Note that 
+the function must also support only one argument: `problem`,
+this version is called the first time after 
+`update-update_to_next_step!` and should default to `Δx=0`
 """
 function update_problem! end
 
