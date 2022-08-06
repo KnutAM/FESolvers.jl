@@ -5,26 +5,30 @@
 [![Build Status](https://github.com/KnutAM/FerriteSolvers.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/KnutAM/FerriteSolvers.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/KnutAM/FerriteSolvers.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/KnutAM/FerriteSolvers.jl)
 
-Package that provides interfaces to different solvers, with three key areas: 
+Package to easily solve nonlinear problem, in particularily tailored to [Ferrite.jl](https://github.com/Ferrite-FEM/Ferrite.jl).
+The main goal is a flexible solution scheme, allowing extensible and modular solver parts, divided into the following three 
+categories areas
 
-* Linear solvers: Solving ``Ax=b``
-* Nonlinear solvers: Solving ``r(x)=0`` 
+* Nonlinear solvers: Solving $\boldsymbol{r}(\boldsymbol{x})=\boldsymbol{0}$
 * Time stepping
+* Linear solvers: Solving $\boldsymbol{A}\boldsymbol{x}=\boldsymbol{b}$
+
+through the `solver = FerriteSolver(nlsolver, timestepper, linearsolver)`
 
 The function 
 ```julia
 solve_ferrite_problem!(solver::FerriteSolver, problem)
 ```
-is given, where `problem` is a user specified datatype, 
+is exported, where `problem` is a user specified datatype, 
 for which the following functions should be defined
 
 ```julia
-a = getunknowns(problem)
-update_to_next_step!(problem, t) # Update boundary conditions etc. for a new time step
-update_problem!(problem, Δa) # Assemble stiffness and residual for a+=Δa, after ensuring that Δa is zero at Dirichlet BC. 
-converged = isconverged(problem, tolerance) # Check if the problem has converged within the given tolerance
+x = getunknowns(problem)
+update_to_next_step!(problem, t)# Update boundary conditions etc. for a new time step
+update_problem!(problem, Δx)    # Assemble stiffness and residual for x+=Δx, after ensuring that Δa is zero at Dirichlet BC. 
+calculate_residualnorm(problem) # Get scalar value of residual
 r = getresidual(problem)
-K = getjacobian(problem)    # K = dr/da
+K = getjacobian(problem)        # K = dr/dx
 handle_converged!(problem, t)   # Do stuff if required after the current time step has converged. 
-postprocess(problem, i) # Do all postprocessing for step i at time t
+postprocess(problem, step)      # Do all postprocessing for current step (after convergence)
 ```
