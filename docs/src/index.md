@@ -3,12 +3,10 @@ CurrentModule = FerriteSolvers
 ```
 
 # FerriteSolvers
+Documentation for [FerriteSolvers.jl](https://github.com/KnutAM/FerriteSolvers.jl).
 
-Documentation for [FerriteSolvers](https://github.com/KnutAM/FerriteSolvers.jl).
 
-```@index
-```
-
-```@autodocs
-Modules = [FerriteSolvers]
+```@docs
+solve_ferrite_problem!
+FerriteSolver
 ```

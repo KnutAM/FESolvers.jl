@@ -15,6 +15,10 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
+        "User problem" => "userfunctions.md",
+        "Nonlinear solvers" => "nlsolvers.md",
+        "Time steppers" => "timesteppers.md",
+        "Linear solvers" => "linearsolvers.md"
     ],
 )
 
