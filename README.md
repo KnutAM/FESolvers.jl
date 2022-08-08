@@ -28,5 +28,5 @@ calculate_residualnorm(problem) # Get scalar value of residual
 r = getresidual(problem)
 K = getjacobian(problem)        # K = dr/dx
 handle_converged!(problem, t)   # Do stuff if required after the current time step has converged. 
-postprocess(problem, step)      # Do all postprocessing for current step (after convergence)
+postprocess!(problem, step)     # Do all postprocessing for current step (after convergence)
 ```

@@ -40,12 +40,12 @@ user-defined `problem`:
 - `getunknowns(problem)`
 - `getresidual(problem)`
 - `getjacobian(problem)`
-- `update_to_next_step(problem, t)`
+- `update_to_next_step!(problem, t)`
 - `update_problem!(problem, Δx)`
 - `calculate_residualnorm(problem)`
 - `handle_converged!(problem)`
 
-Additionally, one can define `postprocess(problem, step)`
+Additionally, one can define `postprocess!(problem, step)`
 For details on each function above, please see the respective
 function's documentation under [User problem](@ref)
 """
