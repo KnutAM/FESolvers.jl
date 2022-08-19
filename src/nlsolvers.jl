@@ -13,16 +13,17 @@ Use the standard NewtonRaphson solver to solve the nonlinear
 problem r(x) = 0 with `tolerance` within the maximum number 
 of iterations `maxiter`
 """
-struct NewtonSolver{T}
+struct NewtonSolver{LS,T}
+    linsolver::LS
     maxiter::Int 
     tolerance::T
     numiter::Vector{Int}  # Last step number of iterations
     residuals::Vector{T}  # Last step residual history
 end
 
-function NewtonSolver(;maxiter=10, tolerance=1.e-6)
+function NewtonSolver(;linsolver=BackslashSolver(), maxiter=10, tolerance=1.e-6)
     residuals = zeros(typeof(tolerance), maxiter+1)
-    return NewtonSolver(maxiter, tolerance, [zero(maxiter)], residuals)
+    return NewtonSolver(linsolver, maxiter, tolerance, [zero(maxiter)], residuals)
 end
 
 function reset!(s::NewtonSolver)
@@ -53,7 +54,7 @@ function solve_nonlinear!(solver::FerriteSolver{<:NewtonSolver}, problem)
         i>maxiter && return false # Did not converge
         r = getresidual(problem)
         K = getjacobian(problem)
-        update_guess!(Δa, K, r, solver.linsolver)
+        update_guess!(Δa, K, r, newtonsolver.linsolver)
         update_problem!(problem, Δa)
     end
 end

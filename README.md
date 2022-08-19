@@ -4,21 +4,12 @@
 [![Coverage](https://codecov.io/gh/KnutAM/FerriteSolvers.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/KnutAM/FerriteSolvers.jl)
 
 Package to easily solve nonlinear problem, in particularily tailored to [Ferrite.jl](https://github.com/Ferrite-FEM/Ferrite.jl).
-The main goal is a flexible solution scheme, allowing extensible and modular solver parts, divided into the following three 
-categories areas
-
-* Nonlinear solvers: Solving $\boldsymbol{r}(\boldsymbol{x})=\boldsymbol{0}$
-* Time stepping
-* Linear solvers: Solving $\boldsymbol{A}\boldsymbol{x}=\boldsymbol{b}$
-
-through the `solver = FerriteSolver(nlsolver, timestepper, linearsolver)`
-
-The function 
+By defining `solver = FerriteSolver(nlsolver, timestepper)`, the function 
 ```julia
 solve_ferrite_problem!(solver::FerriteSolver, problem)
 ```
-is exported, where `problem` is a user specified datatype, 
-for which the following functions should be defined
+solves the user-defined `problem`. For this user defined type, 
+the following functions should be defined
 
 ```julia
 x = getunknowns(problem)

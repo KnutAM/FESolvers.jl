@@ -13,16 +13,14 @@ end
 """
     FerriteSolver(nlsolver, timestepper, linsolver=BackslashSolver())
 
-The standard `solver`, with modular solvers for the nonlinear solver 
-(see [Nonlinear solvers](@ref)), the timestepper (see [Time steppers](@ref)),
-and the linear solver (see [Linear solvers](@ref)). 
+The standard `solver`, with two parts: A nonlinear solver 
+(see [Nonlinear solvers](@ref)) and a time stepper (see [Time steppers](@ref)). 
 """
-struct FerriteSolver{NLS,TS,LS}
+struct FerriteSolver{NLS,TS}
     nlsolver::NLS 
     timestepper::TS
-    linsolver::LS
 end
-FerriteSolver(nlsolver, timestepper) = FerriteSolver(nlsolver, timestepper, BackslashSolver())
+FerriteSolver(nlsolver, timestepper) = FerriteSolver(;nlsolver, timestepper)
 
 include("userfunctions.jl")
 include("linearsolvers.jl")
