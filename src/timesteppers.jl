@@ -50,3 +50,77 @@ function update_time(s::FerriteSolver{<:Any,<:FixedTimeStepper}, t, step, conver
     end
     return s.timestepper.t[step+1], step+1
 end
+
+struct AdaptiveTimeStepper{T}
+    t_start::T
+    t_end::T
+    Δt_init::T
+    Δt_min::T
+    Δt_max::T
+    change_factor::T 
+    num_converged_to_increase::Int
+    num_converged::ScalarWrapper{Int}
+    Δt::ScalarWrapper{T}
+end
+
+function AdaptiveTimeStepper(
+    Δt_init::T, t_end::T; 
+    t_start=zero(T), Δt_min=Δt_init, Δt_max=typemax(T), 
+    change_factor=T(1.5), num_converged_to_increase::Int=1) where T
+    
+    num_converged = ScalarWrapper(0)
+    Δt = ScalarWrapper(Δt_init)
+    return AdaptiveTimeStepper(
+        t_start, t_end, Δt_init, Δt_min, Δt_max,
+        change_factor, num_converged_to_increase,
+        num_converged, Δt)
+end
+
+initial_time(ts::AdaptiveTimeStepper) = ts.t_start 
+islaststep(ts::AdaptiveTimeStepper, t, step) = t >= ts.t_end - eps(t)
+function update_time(s::FerriteSolver{<:Any, <:AdaptiveTimeStepper}, t, step, converged)
+    ts=s.timestepper
+    
+    # Initialization
+    if step == 1 
+        ts.Δt[] = ts.Δt_init   
+        ts.num_converged[] = 0
+    end
+
+    if !converged
+        if step == 1
+            msg = "step=1 implies initial step and then \"convergence of the previous step\" must be true"
+            throw(ArgumentError(msg))
+        end
+        if ts.Δt[] ≈ ts.Δt_min
+            println(ts.Δt[], "≈", ts.Δt_min)
+            msg = "The nonlinear solve failed and the AdaptiveTimeStepper is at its minimum time step"
+            throw(ConvergenceError(msg))
+        end
+        t -= ts.Δt[]
+        ts.Δt[] = max(ts.Δt[]/ts.change_factor, ts.Δt_min)
+        ts.num_converged[] = 0
+    else
+        ts.num_converged[] += 1
+        if ts.num_converged[] > ts.num_converged_to_increase
+            ts.Δt[] = min(ts.Δt[]*ts.change_factor, ts.Δt_max)
+        end
+        step += 1
+    end
+
+    # Ensure that the last time step is not too short.
+    # With the following algorithm, the last two time steps
+    # are only guaranteed to be > Δt_min/2
+    t_remaining = ts.t_end - (t+ts.Δt[])
+    if t_remaining < eps(t)
+        ts.Δt[] = ts.t_end-t
+        t = ts.t_end
+    elseif t_remaining < ts.Δt_min
+        ts.Δt[] = (ts.t_end - t)/2
+        t += ts.Δt[]
+    else
+        t += ts.Δt[]
+    end
+        
+    return t, step
+end

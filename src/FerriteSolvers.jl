@@ -3,7 +3,7 @@ export solve_ferrite_problem!
 
 export FerriteSolver
 export NewtonSolver
-export FixedTimeStepper
+export FixedTimeStepper, AdaptiveTimeStepper
 export BackslashSolver
 
 struct ConvergenceError <: Exception
@@ -22,6 +22,7 @@ struct FerriteSolver{NLS,TS}
 end
 FerriteSolver(nlsolver, timestepper) = FerriteSolver(;nlsolver, timestepper)
 
+include("utils.jl")
 include("userfunctions.jl")
 include("linearsolvers.jl")
 include("nlsolvers.jl")
