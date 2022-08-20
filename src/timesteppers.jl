@@ -93,7 +93,6 @@ function update_time(s::FerriteSolver{<:Any, <:AdaptiveTimeStepper}, t, step, co
             throw(ArgumentError(msg))
         end
         if ts.Δt[] ≈ ts.Δt_min
-            println(ts.Δt[], "≈", ts.Δt_min)
             msg = "The nonlinear solve failed and the AdaptiveTimeStepper is at its minimum time step"
             throw(ConvergenceError(msg))
         end
