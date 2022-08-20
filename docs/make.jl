@@ -25,4 +25,5 @@ makedocs(;
 deploydocs(;
     repo="github.com/KnutAM/FerriteSolvers.jl",
     devbranch="main",
+    push_preview=true,
 )
