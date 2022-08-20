@@ -12,5 +12,6 @@ FerriteSolvers.update_problem!
 FerriteSolvers.calculate_residualnorm
 FerriteSolvers.handle_converged!
 FerriteSolvers.postprocess!
+FerriteSolvers.setunknowns!
 ```
 

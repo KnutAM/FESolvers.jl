@@ -52,7 +52,7 @@ function solve_ferrite_problem!(solver::FerriteSolver, problem)
     t = initial_time(solver.timestepper)
     step = 1
     converged = true
-    xold = copy(getunknowns(problem))   # Since deepcopy! doesn't exist (for use below)
+    xold = deepcopy(getunknowns(problem))
     while !islaststep(solver.timestepper, t, step)
         t, step = update_time(solver, t, step, converged)
         update_to_next_step!(problem, t)
@@ -63,7 +63,7 @@ function solve_ferrite_problem!(solver::FerriteSolver, problem)
             handle_converged!(problem)
             postprocess!(problem, step)
         else
-            copy!(getunknowns(problem), xold)   # Reset unknowns if it didn't converge
+            setunknowns!(problem, xold)         # Reset unknowns if it didn't converge
             # TODO: Printing should be an option
             println("the nonlinear solver didn't converge")
             show(solver.nlsolver)

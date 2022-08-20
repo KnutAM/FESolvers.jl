@@ -67,3 +67,12 @@ Perform any postprocessing at the current time and step nr `step`
 Called after time step converged, and after `handle_converged!`
 """
 function postprocess! end
+
+"""
+    setunknowns!(problem, x)
+
+Set the current value of unknowns to `x`. If `getunknowns(problem)` 
+returns a reference to a `Vector{<:Number}`, this function is not 
+necessary to define. 
+"""
+setunknowns!(problem, x) = copy!(getunknowns(problem), x)
