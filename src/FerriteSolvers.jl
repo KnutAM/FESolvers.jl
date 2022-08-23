@@ -1,5 +1,4 @@
 module FerriteSolvers
-using LinearAlgebra
 
 export solve_ferrite_problem!
 
