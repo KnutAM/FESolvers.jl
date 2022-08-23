@@ -1,24 +1,34 @@
 using FerriteSolvers
 using Documenter
 
+const is_ci = get(ENV, "CI", "false") == "true"
+
+include("generate.jl")
+examples = ["plasticity.jl",]
+GENERATEDEXAMPLES = [joinpath("examples", replace(f, ".jl"=>".md")) for f in examples]
+
+build_examples(examples)
+clean_example_dir()
+
 DocMeta.setdocmeta!(FerriteSolvers, :DocTestSetup, :(using FerriteSolvers); recursive=true)
 
 makedocs(;
     modules=[FerriteSolvers],
-    authors="Knut Andreas Meyer and contributors",
+    authors="Knut Andreas Meyer and Maximilian Köhler",
     repo="https://github.com/KnutAM/FerriteSolvers.jl/blob/{commit}{path}#{line}",
     sitename="FerriteSolvers.jl",
     format=Documenter.HTML(;
-        prettyurls=get(ENV, "CI", "false") == "true",
+        prettyurls=is_ci,
         canonical="https://KnutAM.github.io/FerriteSolvers.jl",
         assets=String[],
     ),
     pages=[
         "Home" => "index.md",
-        "User problem" => "userfunctions.md",
-        "Nonlinear solvers" => "nlsolvers.md",
-        "Time steppers" => "timesteppers.md",
-        "Linear solvers" => "linearsolvers.md"
+        "Manual" => ["userfunctions.md",
+                     "nlsolvers.md",
+                     "timesteppers.md",
+                     "linearsolvers.md"],
+        "Examples" => GENERATEDEXAMPLES,   
     ],
 )
 

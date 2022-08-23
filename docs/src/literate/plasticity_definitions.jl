@@ -18,7 +18,7 @@ function J2Plasticity(E, ν, σ₀, H)
 end;
 
 struct J2PlasticityMaterialState{T, S <: SecondOrderTensor{3, T}}
-    # Store "converged" values
+    ## Store "converged" values
     ϵᵖ::S # plastic strain
     σ::S # stress
     k::T # hardening variable
@@ -37,11 +37,11 @@ function vonMises(σ)
 end;
 
 function compute_stress_tangent(ϵ::SymmetricTensor{2, 3}, material::J2Plasticity, state::J2PlasticityMaterialState)
-    # unpack some material parameters
+    ## unpack some material parameters
     G = material.G
     H = material.H
 
-    # We use (•)ᵗ to denote *trial*-values
+    ## We use (•)ᵗ to denote *trial*-values
     σᵗ = material.Dᵉ ⊡ (ϵ - state.ϵᵖ) # trial-stress
     sᵗ = dev(σᵗ)         # deviatoric part of trial-stress
     J₂ = 0.5 * sᵗ ⊡ sᵗ   # second invariant of sᵗ
@@ -60,7 +60,7 @@ function compute_stress_tangent(ϵ::SymmetricTensor{2, 3}, material::J2Plasticit
         s = c1 * sᵗ           # updated deviatoric stress
         σ = s + vol(σᵗ)       # updated stress
 
-        # Compute algorithmic tangent stiffness ``D = \frac{\Delta \sigma }{\Delta \epsilon}``
+        ## Compute algorithmic tangent stiffness ``D = \frac{\Delta \sigma }{\Delta \epsilon}``
         κ = H * (state.k + μ) # drag stress
         σₑ = material.σ₀ + κ  # updated yield surface
 
@@ -72,7 +72,7 @@ function compute_stress_tangent(ϵ::SymmetricTensor{2, 3}, material::J2Plasticit
         Dtemp(i,j,k,l) = -2G*b * Q(i,j,k,l) - 9G^2 / (h*σₑ^2) * s[i,j]*s[k,l]
         D = material.Dᵉ + SymmetricTensor{4, 3}(Dtemp)
 
-        # Return new state
+        ## Return new state
         Δϵᵖ = 3/2 * μ / σₑ * s # plastic strain
         ϵᵖ = state.ϵᵖ + Δϵᵖ    # plastic strain
         k = state.k + μ        # hardening variable
@@ -81,14 +81,14 @@ function compute_stress_tangent(ϵ::SymmetricTensor{2, 3}, material::J2Plasticit
 end
 
 function create_values(interpolation)
-    # setup quadrature rules
+    ## setup quadrature rules
     qr      = QuadratureRule{3,RefTetrahedron}(2)
     face_qr = QuadratureRule{2,RefTetrahedron}(3)
 
-    # create geometric interpolation (use the same as for u)
+    ## create geometric interpolation (use the same as for u)
     interpolation_geom = Lagrange{3,RefTetrahedron,1}()
 
-    # cell and facevalues for u
+    ## cell and facevalues for u
     cellvalues_u = CellVectorValues(qr, interpolation, interpolation_geom)
     facevalues_u = FaceVectorValues(face_qr, interpolation, interpolation_geom)
 
@@ -105,7 +105,7 @@ end
 
 function create_bc(dh, grid)
     dbcs = ConstraintHandler(dh)
-    # Clamped on the left side
+    ## Clamped on the left side
     dofs = [1, 2, 3]
     dbc = Dirichlet(:u, getfaceset(grid, "left"), (x,t) -> [0.0, 0.0, 0.0], dofs)
     add!(dbcs, dbc)
@@ -141,7 +141,7 @@ function assemble_cell!(Ke, re, cell, cellvalues, facevalues, grid, material,
     reinit!(cellvalues, cell)
 
     for q_point in 1:getnquadpoints(cellvalues)
-        # For each integration point, compute stress and material stiffness
+        ## For each integration point, compute stress and material stiffness
         ϵ = function_symmetric_gradient(cellvalues, q_point, ue) # Total strain
         σ, D, state[q_point] = compute_stress_tangent(ϵ, material, state_old[q_point])
 
