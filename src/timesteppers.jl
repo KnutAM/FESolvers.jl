@@ -51,6 +51,19 @@ function update_time(s::FerriteSolver{<:Any,<:FixedTimeStepper}, t, step, conver
     return s.timestepper.t[step+1], step+1
 end
 
+
+"""
+    AdaptiveTimeStepper(
+        Δt_init::T, t_end::T; 
+        t_start=zero(T), Δt_min=Δt_init, Δt_max=typemax(T), 
+        change_factor=T(1.5), num_converged_to_increase::Int=1) where T
+
+An adaptive time stepper, starting with a step `Δt_init` and with a 
+maximum time of `t_end`. The `change_factor` describes how much the 
+time step is changed in the case of (a) no convergence: 
+`Δt/=change_factor` and (b) converged the last `num_converged_to_increase`
+time steps: `Δt*=change_factor`.
+"""
 struct AdaptiveTimeStepper{T}
     t_start::T
     t_end::T
@@ -120,6 +133,6 @@ function update_time(s::FerriteSolver{<:Any, <:AdaptiveTimeStepper}, t, step, co
     else
         t += ts.Δt[]
     end
-        
+
     return t, step
 end
