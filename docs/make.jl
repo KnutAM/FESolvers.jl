@@ -8,7 +8,6 @@ examples = ["plasticity.jl",]
 GENERATEDEXAMPLES = [joinpath("examples", replace(f, ".jl"=>".md")) for f in examples]
 
 build_examples(examples)
-clean_example_dir()
 
 DocMeta.setdocmeta!(FerriteSolvers, :DocTestSetup, :(using FerriteSolvers); recursive=true)
 

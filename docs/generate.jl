@@ -31,10 +31,7 @@ function build_examples(examples)
         Literate.markdown(input, GENERATEDDIR, postprocess = mdpost)
         Literate.notebook(input, GENERATEDDIR, execute = is_ci) # Don't execute locally
     end
-end
 
-function clean_example_dir()
-    # remove any .vtu files in the generated dir (should not be deployed)
     cd(GENERATEDDIR) do
         foreach(file -> endswith(file, ".vtu") && rm(file), readdir())
         foreach(file -> endswith(file, ".pvd") && rm(file), readdir())
