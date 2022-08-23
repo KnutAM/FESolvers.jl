@@ -1,4 +1,6 @@
 module FerriteSolvers
+using LinearAlgebra
+
 export solve_ferrite_problem!
 
 export FerriteSolver
@@ -53,7 +55,7 @@ function solve_ferrite_problem!(solver::FerriteSolver, problem)
     step = 1
     converged = true
     xold = deepcopy(getunknowns(problem))
-    while !islaststep(solver.timestepper, t, step)
+    while !islaststep(solver.timestepper, t, step) || !converged
         t, step = update_time(solver, t, step, converged)
         update_to_next_step!(problem, t)
         update_problem!(problem)
