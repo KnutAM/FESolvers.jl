@@ -4,7 +4,6 @@ The following linear solves are included
 BackslashSolver
 ```
 
-
 ## Implementation of custom linear solvers
 A linear solver should support the `update_guess!` function specified below. 
 

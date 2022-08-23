@@ -14,5 +14,3 @@ FerriteSolvers.initial_time
 FerriteSolvers.islaststep
 FerriteSolvers.update_time
 ```
-
-

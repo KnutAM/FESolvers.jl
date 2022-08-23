@@ -4,7 +4,6 @@ The following nonlinear solves are included
 NewtonSolver
 ```
 
-
 ## Implementation of custom nonlinear solvers
 A nonlinear solver should support the `solve_nonlinear!` function specified below. 
 
