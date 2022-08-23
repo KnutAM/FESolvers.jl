@@ -41,3 +41,29 @@ end
 FerriteSolvers.calculate_residualnorm(p::TestProblem) = norm(p.r)
 FerriteSolvers.handle_converged!(::TestProblem) = nothing # Not used
 FerriteSolvers.postprocess!(p::TestProblem, step) = push!(p.rv, norm(p.r))
+
+struct Rosenbrock{T}
+    x::Vector{T}
+    r::Vector{T}
+    drdx::Matrix{T}
+    rv::Vector{T}
+end
+
+Rosenbrock() = Rosenbrock(zeros(2), zeros(2), zeros(2,2), zeros(0))
+
+FerriteSolvers.getunknowns(p::Rosenbrock) = p.x
+FerriteSolvers.getresidual(p::Rosenbrock) = p.r
+FerriteSolvers.getjacobian(p::Rosenbrock) = p.drdx
+FerriteSolvers.getenergy(p::Rosenbrock,x) = 100*(x[2] - x[1]^2)^2 + (1-x[1])^2
+FerriteSolvers.update_to_next_step!(p::Rosenbrock, time) = nothing
+function FerriteSolvers.update_problem!(p::Rosenbrock, Δx=nothing)
+    isnothing(Δx) || (p.x .+= Δx)
+    dfdx = ForwardDiff.gradient(x_->FerriteSolvers.getenergy(p,x_),p.x)
+    d²fdxdx = ForwardDiff.hessian(x_->FerriteSolvers.getenergy(p,x_),p.x)
+    p.r .= dfdx
+    p.drdx .= d²fdxdx
+end
+FerriteSolvers.calculate_residualnorm(p::Rosenbrock) = norm(p.r)
+FerriteSolvers.handle_converged!(::Rosenbrock) = nothing # Not used
+FerriteSolvers.postprocess!(p::Rosenbrock, step) = push!(p.rv, norm(p.r))
+
