@@ -126,12 +126,16 @@ function solve_nonlinear!(solver::FerriteSolver{<:SteepestDescent}, problem)
         r = getresidual(problem)
         K = getpreconditioning(problem)
         update_guess!(Δa, K, r, steepestdescent.linsolver)
-        τ = linesearch(problem,Δa,ls) 
+        #τ = linesearch(problem,Δa,ls) 
+        τ = 0.1
         @show τ
         Δa .*= τ
+        @show Δa
         update_problem!(problem,Δa)
     end
 end
+
+linesearch(problem,searchdirection,ls::NoLineSearch) = 1.0
 
 function linesearch(problem,searchdirection,ls::ArmijoGoldstein) 
     τ = ls.τ0; μ = ls.μ; β = ls.β

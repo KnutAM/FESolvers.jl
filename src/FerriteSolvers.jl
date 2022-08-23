@@ -5,7 +5,7 @@ export solve_ferrite_problem!
 export FerriteSolver
 export NewtonSolver
 export SteepestDescent
-export ArmijoGoldstein
+export ArmijoGoldstein, NoLineSearch
 export FixedTimeStepper
 export BackslashSolver
 

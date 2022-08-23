@@ -1,5 +1,0 @@
-[deps]
-FerriteSolvers = "79314e9b-2e6f-4d6d-a72d-515aa2604984"
-ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
-LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
