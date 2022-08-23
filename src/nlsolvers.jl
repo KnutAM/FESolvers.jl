@@ -127,6 +127,7 @@ function solve_nonlinear!(solver::FerriteSolver{<:SteepestDescent}, problem)
         K = getpreconditioning(problem)
         update_guess!(Δa, K, r, steepestdescent.linsolver)
         τ = linesearch(problem,Δa,ls) 
+        @show τ
         Δa .*= τ
         update_problem!(problem,Δa)
     end
@@ -140,7 +141,7 @@ function linesearch(problem,searchdirection,ls::ArmijoGoldstein)
     Πₐ = getenergy(problem,𝐮 .+ τ .* searchdirection)
     armijo = Πₐ - Π₀ - μ * τ * δΠ₀'searchdirection
     
-    while armijo > 0
+    while armijo > 0 && !isapprox(armijo,0.0,atol=1e-8)
         τ *= β
         Πₐ = getenergy(problem,𝐮 .+ τ .* searchdirection)
         armijo = Πₐ - Π₀ - μ * τ * δΠ₀'searchdirection

@@ -22,7 +22,7 @@ FerriteSolvers.getresidual(p::TestProblem) = p.r
 FerriteSolvers.getjacobian(p::TestProblem) = p.drdx
 function FerriteSolvers.getenergy(p::TestProblem,x)
     #first residual element
-    p.f[1]*x[1] + 0.5*(x[1]*norm(x)+(x[2]^2+x[3]^2)*log(norm(x))) +
+    p.f[1]*x[1] - 0.5*(x[1]*norm(x)+(x[2]^2+x[3]^2)*log(norm(x))) +
     #second residual element
     p.f[2]*x[2] + x[1]*x[2] +
     #third residual element
