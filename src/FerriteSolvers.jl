@@ -12,7 +12,7 @@ struct ConvergenceError <: Exception
 end
 
 """
-    FerriteSolver(nlsolver, timestepper, linsolver=BackslashSolver())
+    FerriteSolver(nlsolver, timestepper)
 
 The standard `solver`, with two parts: A nonlinear solver 
 (see [Nonlinear solvers](@ref)) and a time stepper (see [Time steppers](@ref)). 
