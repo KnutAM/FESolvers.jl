@@ -1,8 +1,11 @@
 module FerriteSolvers
+import LinearAlgebra
 export solve_ferrite_problem!
 
 export FerriteSolver
 export NewtonSolver
+export SteepestDescent
+export ArmijoGoldstein
 export FixedTimeStepper
 export BackslashSolver
 

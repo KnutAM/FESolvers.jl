@@ -63,7 +63,8 @@ abstract type AbstractLineSearch end
 "Singleton that does not perform a linesearch when used in a nonlinear solver"
 struct NoLineSearch <: AbstractLineSearch end
 
-"""
+@doc raw"""
+    Armijo-Goldstein{T}(;β=0.9,μ=0.01,τ0=1.0,τmin=1e-4)
 Backtracking line search based on the Armijo-Goldstein condition
 
 ```math
@@ -80,12 +81,12 @@ where \$\Pi\$ is the potential, \$\tau\$ the stepsize, and \$\delta\Pi\$ the res
 """
 Base.@kwdef struct ArmijoGoldstein{T} <: AbstractLineSearch
     β::T = 0.9
-    μ::T = 0.01
+    μ::T = 0.10
     τ0::T = 1.0
-    τmin::T = 1e-4
+    τmin::T = 1e-5
 end
 
-"""
+@doc raw"""
     SteepestDescent(;maxiter=10, tolerance=1.e-6)
 
 Use a steepest descent solver to solve the nonlinear 
@@ -95,23 +96,29 @@ and the maximum number of iterations `maxiter`.
 This method is second derivative free and is not as locally limited as a Newton-Raphson scheme.
 Thus, it is especially suited for stronlgy nonlinear behavior with potentially vanishing tangent stiffnesses.
 """
-Base.@kwdef struct SteepestDescent{LinearSolver,T,LineSearch{T}}
+Base.@kwdef struct SteepestDescent{LineSearch,LinearSolver,T}
     linsolver::LinearSolver = BackslashSolver()
     linesearch::LineSearch = ArmijoGoldstein()
-    maxiter::Int = 100
+    maxiter::Int = 200
     tolerance::T = 1e-6
+end
+
+reset!(s::SteepestDescent) = nothing
+
+function Base.show(s::SteepestDescent)
+    println("ArmijoGoldstein")
 end
 
 function solve_nonlinear!(solver::FerriteSolver{<:SteepestDescent}, problem)
     steepestdescent = solver.nlsolver
-    ls = solver.linesearch
+    ls = steepestdescent.linesearch
     maxiter = steepestdescent.maxiter
     tol = steepestdescent.tolerance
     Δa = zero(getunknowns(problem))
     reset!(steepestdescent)
     for i in 1:(maxiter+1)
-        steepestdescent.numiter .= i
         _norm = calculate_residualnorm(problem)
+        @show _norm
         if _norm < tol
             return true
         end
@@ -119,7 +126,25 @@ function solve_nonlinear!(solver::FerriteSolver{<:SteepestDescent}, problem)
         r = getresidual(problem)
         K = getpreconditioning(problem)
         update_guess!(Δa, K, r, steepestdescent.linsolver)
-        linesearch() 
-        update_problem!(problem, Δa)
+        τ = linesearch(problem,Δa,ls) 
+        Δa .*= τ
+        update_problem!(problem,Δa)
     end
+end
+
+function linesearch(problem,searchdirection,ls::ArmijoGoldstein) 
+    τ = ls.τ0; μ = ls.μ; β = ls.β
+    𝐮 = getunknowns(problem)
+    Π₀ = getenergy(problem,𝐮)
+    δΠ₀ = getresidual(problem)
+    Πₐ = getenergy(problem,𝐮 .+ τ .* searchdirection)
+    armijo = Πₐ - Π₀ - μ * τ * δΠ₀'searchdirection
+    
+    while armijo > 0
+        τ *= β
+        Πₐ = getenergy(problem,𝐮 .+ τ .* searchdirection)
+        armijo = Πₐ - Π₀ - μ * τ * δΠ₀'searchdirection
+    end
+    τ = max(ls.τmin,τ)
+    return τ
 end
