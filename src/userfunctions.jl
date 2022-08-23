@@ -45,11 +45,15 @@ function update_problem! end
 
 
 """
-    calculate_residualnorm(problem)
+    calculate_convergence_criterion(problem)
 
-Calculate the value of the residual norm to be compared with the iteration tolerance
+Calculate a value to be compared with the tolerance of the nonlinear solver. 
+A standard case when using [Ferrite.jl](https://github.com/Ferrite-FEM/Ferrite.jl)
+is `norm(getresidual(problem)[Ferrite.free_dofs(dbcs)])` 
+where `dbcs::Ferrite.ConstraintHandler`
+
 """
-function calculate_residualnorm end
+function calculate_convergence_criterion end
 
 """
     handle_converged!(problem)

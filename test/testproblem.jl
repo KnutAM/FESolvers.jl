@@ -30,6 +30,6 @@ function FerriteSolvers.update_problem!(p::TestProblem, Δx=nothing)
     p.drdx .= ForwardDiff.jacobian(x_->residual(x_, p.f), p.x)
 end
 
-FerriteSolvers.calculate_residualnorm(p::TestProblem) = norm(p.r)
+FerriteSolvers.calculate_convergence_criterion(p::TestProblem) = norm(p.r)
 FerriteSolvers.handle_converged!(::TestProblem) = nothing # Not used
 FerriteSolvers.postprocess!(p::TestProblem, step) = push!(p.rv, norm(p.r))
