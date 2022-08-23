@@ -47,7 +47,7 @@ function solve_nonlinear!(solver::FerriteSolver{<:NewtonSolver}, problem)
     reset!(newtonsolver)
     for i in 1:(maxiter+1)
         newtonsolver.numiter .= i
-        newtonsolver.residuals[i] = calculate_residualnorm(problem)
+        newtonsolver.residuals[i] = calculate_convergence_criterion(problem)
         if newtonsolver.residuals[i] < tol
             return true
         end
