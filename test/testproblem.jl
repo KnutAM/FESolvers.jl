@@ -20,14 +20,6 @@ TestProblem() = TestProblem(zeros(3), zeros(3), zeros(3,3), t->[exp(t); cos(t); 
 FerriteSolvers.getunknowns(p::TestProblem) = p.x
 FerriteSolvers.getresidual(p::TestProblem) = p.r
 FerriteSolvers.getsystemmatrix(p::TestProblem,s::NewtonSolver) = p.drdx
-function FerriteSolvers.getenergy(p::TestProblem,x)
-    #first residual element
-    p.f[1]*x[1] - 0.5*(x[1]*norm(x)+(x[2]^2+x[3]^2)*log(norm(x)+x[1])) +
-    #second residual element
-    p.f[2]*x[2] + x[1]*x[2] +
-    #third residual element
-    p.f[3]*x[3] + (x[3]^3/3) - x[3]*x[2]
-end
 function FerriteSolvers.update_to_next_step!(p::TestProblem, time)
     p.f .= p.fun(time)
 end
@@ -49,7 +41,7 @@ struct Rosenbrock{T}
     rv::Vector{T}
 end
 
-Rosenbrock() = Rosenbrock(-ones(2), zeros(2), zeros(2,2), zeros(0))
+Rosenbrock() = Rosenbrock([-1.0,1.0], zeros(2), zeros(2,2), zeros(0))
 
 FerriteSolvers.getunknowns(p::Rosenbrock) = p.x
 FerriteSolvers.getresidual(p::Rosenbrock) = p.r

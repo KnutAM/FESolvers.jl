@@ -103,11 +103,16 @@ Base.@kwdef struct SteepestDescent{LineSearch,LinearSolver,T}
     linesearch::LineSearch = ArmijoGoldstein()
     maxiter::Int = 200
     tolerance::T = 1e-6
-    numiter::Vector{Int} = Int[]  # Last step number of iterations
-    residuals::Vector{T} = Float64[]  # Last step residual history
+    numiter::Vector{Int} = [zero(maxiter)]  # Last step number of iterations
+    residuals::Vector{T} = zeros(typeof(tolerance),maxiter+1)  # Last step residual history
 end
 
-reset!(s::SteepestDescent) = nothing
+getsystemmatrix(problem,solver::SteepestDescent) = LinearAlgebra.I
+
+function reset!(s::SteepestDescent)
+    fill!(s.numiter, 0)
+    fill!(s.residuals, 0)
+end
 
 function Base.show(s::SteepestDescent)
     println("Steepest Descent")

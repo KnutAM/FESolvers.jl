@@ -24,6 +24,14 @@ and thus, renders a vanilla gradient descent solver.
 function getsystemmatrix end
 
 """
+    getenergy(problem,𝐮)
+
+Return the energy of the system (a scalar) which is the integrated energy
+density over the domain Ω.
+"""
+function getenergy end
+
+"""
     update_to_next_step!(problem, time)
 
 Update prescribed values, external loads etc. for the given time
@@ -75,24 +83,3 @@ Perform any postprocessing at the current time and step nr `step`
 Called after time step converged, and after `handle_converged!`
 """
 function postprocess! end
-
-"""
-    getenergy(problem,𝐮)
-
-Return the energy of the system (a scalar) which is the integrated energy
-density over the domain Ω.
-"""
-function getenergy end
-
-"""
-    preconditioning(problem)
-
-Returns the preconditioning matrix for the `SteepestDescent` solver.
-By default the preconditioning is the unity matrix. For structural mechanics
-the discrete L2 product of the function gradients can be used. In general any
-other suited scalar product of the chosen function space. With the unity matrix
-the `SteepestDescent` solver is a gradient descent, whereas it becomes a
-Quasi-Newton method for sophisticated preconditioning choices. For more
-details see e.g. Bartels, 2015, section 4.3.1 and 9.2.5  
-"""
-getpreconditioning(problem) = LinearAlgebra.I
