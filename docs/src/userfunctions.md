@@ -9,7 +9,7 @@ FerriteSolvers.getresidual
 FerriteSolvers.getjacobian
 FerriteSolvers.update_to_next_step!
 FerriteSolvers.update_problem!
-FerriteSolvers.calculate_residualnorm
+FerriteSolvers.calculate_convergence_criterion
 FerriteSolvers.handle_converged!
 FerriteSolvers.postprocess!
 ```

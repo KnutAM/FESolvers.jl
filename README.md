@@ -15,7 +15,7 @@ the following functions should be defined
 x = getunknowns(problem)
 update_to_next_step!(problem, t)# Update boundary conditions etc. for a new time step
 update_problem!(problem, Δx)    # Assemble stiffness and residual for x+=Δx 
-calculate_residualnorm(problem) # Get scalar value of residual
+calculate_convergence_criterion(problem) # Get a scalar value to compare with the iteration tolerance
 r = getresidual(problem)
 K = getjacobian(problem)        # K = dr/dx
 handle_converged!(problem, t)   # Do stuff if required after the current time step has converged. 

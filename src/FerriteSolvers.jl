@@ -43,7 +43,7 @@ user-defined `problem`:
 - `getjacobian(problem)`
 - `update_to_next_step!(problem, t)`
 - `update_problem!(problem, Δx)`
-- `calculate_residualnorm(problem)`
+- `calculate_convergence_criterion(problem)`
 - `handle_converged!(problem)`
 
 Additionally, one can define `postprocess!(problem, step)`
