@@ -13,11 +13,15 @@ Return the current residual vector of the problem
 function getresidual end
 
 """
-    getjacobian(problem)
+    getsystemmatrix(problem,solver)
 
-Return the current jacobian of the problem
+Return the system matrix of the problem. For a Newton solver this
+method should return the Jacobian, while for a steepest descent method
+this can be a preconditioner as e.g., the L2 product of the gradients.
+By default the system matrix for the `SteepestDescent` method is the unity matrix
+and thus, renders a vanilla gradient descent solver.
 """
-function getjacobian end
+function getsystemmatrix end
 
 """
     update_to_next_step!(problem, time)

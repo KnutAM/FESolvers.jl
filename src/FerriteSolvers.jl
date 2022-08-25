@@ -40,7 +40,7 @@ user-defined `problem`:
 
 - `getunknowns(problem)`
 - `getresidual(problem)`
-- `getjacobian(problem)`
+- `getsystemmatrix(problem,solver)`
 - `update_to_next_step!(problem, t)`
 - `update_problem!(problem, Δx)`
 - `calculate_convergence_criterion(problem)`
