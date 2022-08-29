@@ -3,8 +3,7 @@ import LinearAlgebra
 export solve_ferrite_problem!
 
 export FerriteSolver
-export NewtonSolver
-export SteepestDescent
+export NewtonSolver, SteepestDescent
 export ArmijoGoldstein, NoLineSearch
 export FixedTimeStepper
 export BackslashSolver
