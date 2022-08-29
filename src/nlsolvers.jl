@@ -25,24 +25,35 @@ Base.@kwdef struct ArmijoGoldstein{T} <: AbstractLineSearch
     τmin::T = 1e-5
 end
 
-linesearch(problem,searchdirection,ls::NoLineSearch) = 1.0
+linesearch!(problem,searchdirection,ls::NoLineSearch) = nothing
 
-function linesearch(problem,searchdirection,ls::ArmijoGoldstein) 
+function linesearch!(problem,searchdirection,ls::ArmijoGoldstein) 
     τ = ls.τ0; μ = ls.μ; β = ls.β
     𝐮 = getunknowns(problem)
-    Π₀ = getenergy(problem,𝐮)
+    Π₀ = calculate_energy(problem,𝐮)
     δΠ₀ = getresidual(problem)
-    Πₐ = getenergy(problem,𝐮 .+ τ .* searchdirection)
+    Πₐ = calculate_energy(problem,𝐮 .+ τ .* searchdirection)
     armijo = Πₐ - Π₀ - μ * τ * δΠ₀'searchdirection
     
     while armijo > 0 && !isapprox(armijo,0.0,atol=1e-8)
         τ *= β
-        Πₐ = getenergy(problem,𝐮 .+ τ .* searchdirection)
+        Πₐ = calculate_energy(problem,𝐮 .+ τ .* searchdirection)
         armijo = Πₐ - Π₀ - μ * τ * δΠ₀'searchdirection
     end
     τ = max(ls.τmin,τ)
-    return τ
+    searchdirection .*= τ
 end
+
+"""
+    getlinesearch(nlsolver)
+Returns the used linesearch of the nonlinear solver.
+"""
+getlinesearch(nlsolver) = nlsolver.linesearch
+"""
+    getmaxiter(nlsolver)
+Returns the maximum number of iterations allowed for the nonlinear solver
+"""
+getmaxiter(nlsolver) = nlsolver.maxiter
 
 """
     solve_nonlinear!(solver::FerriteSolver{<:NLS}, problem)
@@ -120,9 +131,9 @@ end
 
 function solve_nonlinear!(solver::FerriteSolver{T}, problem) where T<:Union{SteepestDescent,NewtonSolver}
     nlsolver = solver.nlsolver
-    maxiter = nlsolver.maxiter
+    maxiter = getmaxiter(nlsolver)
     tol = nlsolver.tolerance
-    ls = nlsolver.linesearch
+    ls = getlinesearch(nlsolver)
     Δa = zero(getunknowns(problem))
     reset!(nlsolver)
     for i in 1:(maxiter+1)
@@ -135,8 +146,7 @@ function solve_nonlinear!(solver::FerriteSolver{T}, problem) where T<:Union{Stee
         r = getresidual(problem)
         K = getsystemmatrix(problem,nlsolver)
         update_guess!(Δa, K, r, nlsolver.linsolver)
-        τ = linesearch(problem,Δa,ls) 
-        Δa .*= τ
+        linesearch!(problem,Δa,ls) 
         update_problem!(problem, Δa)
     end
 end

@@ -24,12 +24,12 @@ and thus, renders a vanilla gradient descent solver.
 function getsystemmatrix end
 
 """
-    getenergy(problem,𝐮)
+    calculate_energy(problem,𝐮)
 
 Return the energy of the system (a scalar) which is the integrated energy
 density over the domain Ω.
 """
-function getenergy end
+function calculate_energy end
 
 """
     update_to_next_step!(problem, time)
