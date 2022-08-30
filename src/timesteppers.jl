@@ -56,13 +56,20 @@ end
     AdaptiveTimeStepper(
         Δt_init::T, t_end::T; 
         t_start=zero(T), Δt_min=Δt_init, Δt_max=typemax(T), 
-        change_factor=T(1.5), num_converged_to_increase::Int=1) where T
+        change_factor=T(0.5), change_exponent=T(0.25)) where T
 
-An adaptive time stepper, starting with a step `Δt_init` and with a 
-maximum time of `t_end`. The `change_factor` describes how much the 
-time step is changed in the case of (a) no convergence: 
-`Δt/=change_factor` and (b) converged the last `num_converged_to_increase`
-time steps: `Δt*=change_factor`.
+An adaptive time stepper with an initial step `Δt_init` and total  
+time `t_end`. If the previous attempt did not converge, the time 
+step is reduced as `Δt*=change_factor` and the step is retried. 
+Otherwise, the next time step depends on how many iterations was 
+required to converge, `numiter`. The time step is changed as 
+`Δt*=change_factor^m`, where `m=(numiter-optiter)/(maxiter-optiter)`.
+
+In this expression, `maxiter` and `optiter` are the maximum and optimum 
+number of iterations for the nonlinear solver. 
+These parameters are obtained from the functions `getnumiter(s)`,
+`getmaxiter(s)`, and `getoptiter(s)` where `s` is the nonlinear solver. 
+If not defined for the specific solver, `optiter=floor(maxiter/2)`.
 """
 struct AdaptiveTimeStepper{T}
     t_start::T
@@ -71,22 +78,16 @@ struct AdaptiveTimeStepper{T}
     Δt_min::T
     Δt_max::T
     change_factor::T 
-    num_converged_to_increase::Int
-    num_converged::ScalarWrapper{Int}
     Δt::ScalarWrapper{T}
 end
 
 function AdaptiveTimeStepper(
     Δt_init::T, t_end::T; 
     t_start=zero(T), Δt_min=Δt_init, Δt_max=typemax(T), 
-    change_factor=T(1.5), num_converged_to_increase::Int=1) where T
-    
-    num_converged = ScalarWrapper(0)
-    Δt = ScalarWrapper(Δt_init)
+    change_factor=T(0.5)) where T
     return AdaptiveTimeStepper(
         t_start, t_end, Δt_init, Δt_min, Δt_max,
-        change_factor, num_converged_to_increase,
-        num_converged, Δt)
+        change_factor, ScalarWrapper(Δt_init))
 end
 
 initial_time(ts::AdaptiveTimeStepper) = ts.t_start 
@@ -96,27 +97,27 @@ function update_time(s::FerriteSolver{<:Any, <:AdaptiveTimeStepper}, t, step, co
     
     # Initialization
     if step == 1 
-        ts.Δt[] = ts.Δt_init   
-        ts.num_converged[] = 0
-    end
-
-    if !converged
-        if step == 1
+        if !converged
             msg = "step=1 implies initial step and then \"convergence of the previous step\" must be true"
             throw(ArgumentError(msg))
         end
+        ts.Δt[] = min(t+ts.Δt_init, ts.t_end)-t
+        return t+ts.Δt[], step+1
+    end
+
+    if !converged
         if ts.Δt[] ≈ ts.Δt_min
             msg = "The nonlinear solve failed and the AdaptiveTimeStepper is at its minimum time step"
             throw(ConvergenceError(msg))
         end
         t -= ts.Δt[]
-        ts.Δt[] = max(ts.Δt[]/ts.change_factor, ts.Δt_min)
-        ts.num_converged[] = 0
+        ts.Δt[] = max(ts.Δt[]*ts.change_factor, ts.Δt_min)
     else
-        ts.num_converged[] += 1
-        if ts.num_converged[] > ts.num_converged_to_increase
-            ts.Δt[] = min(ts.Δt[]*ts.change_factor, ts.Δt_max)
-        end
+        numiter = getnumiter(s.nlsolver)
+        optiter = getoptiter(s.nlsolver)
+        maxiter = getmaxiter(s.nlsolver)
+        m = (numiter-optiter)/(maxiter-optiter)
+        ts.Δt[] = min(max(ts.Δt[] * (ts.change_factor^m), ts.Δt_min), ts.Δt_max)
         step += 1
     end
 

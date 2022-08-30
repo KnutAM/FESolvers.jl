@@ -16,6 +16,11 @@ function run_timestepper(solver, convergence_function)
     return timehistory
 end
 
+# Dummy overloads for testing
+FerriteSolvers.getnumiter(::Nothing) = 1
+FerriteSolvers.getmaxiter(::Nothing) = 4
+FerriteSolvers.getoptiter(::Nothing) = 2
+
 @testset "timesteppers" begin
     #=
     @testset "FixedTimeStepper" begin
@@ -32,8 +37,8 @@ end
         Δt = 0.1
         Δt_min = 0.05
         Δt_max = 0.2
-        nc2incr = 2
-        ts = AdaptiveTimeStepper(Δt, t_end; Δt_min=Δt_min, Δt_max=Δt_max, num_converged_to_increase=nc2incr)
+
+        ts = AdaptiveTimeStepper(Δt, t_end; Δt_min=Δt_min, Δt_max=Δt_max)
         solver = FerriteSolver(nothing, ts)
         @test FerriteSolvers.initial_time(ts) ≈ 0.0
         t, step = FerriteSolvers.update_time(solver, 0.0, 1, true)
@@ -41,11 +46,13 @@ end
         @test step == 2
 
         cf(t, Δt, _) = t < 1.0 || Δt < (Δt_min+sqrt(eps(Δt_min)))
+
         th = run_timestepper(FerriteSolver(nothing,ts), cf)
+        
         Δth = th[2:end]-th[1:end-1]
-        @test all(Δth[1:2] .≈ Δt )
+        @test Δth[1] .≈ Δt
         @test maximum(Δth) ≈ Δt_max 
-        @test all(minimum(Δth[1:end-2]) .≈ Δt_min)
+        @test minimum(Δth[1:end-2]) .≈ Δt_min
         @test minimum(Δth) > Δt_min/2
 
         t_end = 0.91
