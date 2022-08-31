@@ -41,6 +41,7 @@ FerriteSolvers.getmaxiter(::Nothing) = 4
         @test_logs (:warn,) match_mode=:any AdaptiveTimeStepper(0.1, 10.0; change_factor=-0.2)
         @test_logs (:warn,) match_mode=:any AdaptiveTimeStepper(0.1, 10.0; optiter_ratio=1.2)
         @test_logs (:warn,) match_mode=:any AdaptiveTimeStepper(0.1, 10.0; optiter_ratio=-0.2)
+        @test_logs (:warn,) match_mode=:any AdaptiveTimeStepper(0.1, 10.0; k=-0.2)
 
         t_end = 2.0
         Δt = 0.1

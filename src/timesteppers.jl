@@ -56,7 +56,7 @@ end
     AdaptiveTimeStepper(
         Δt_init::T, t_end::T; 
         t_start=zero(T), Δt_min=Δt_init, Δt_max=typemax(T), 
-        change_factor=T(0.5), optiter_ratio=T(0.5)) where T
+        change_factor=T(0.5), optiter_ratio=T(0.5), k=one(T)) where T
 
 An adaptive time stepper with an initial step `Δt_init` and total  
 time `t_end`. Two ways of adaption:
@@ -66,14 +66,15 @@ step is reduced as `Δt*=change_factor` and the step is retried.
 
 2. If convergence, the next time step depends on how many iterations was 
 required to converge; `numiter`. The time step is changed as 
-`Δt*=change_factor^m`, where `m=(numiter-optiter)/(maxiter-optiter)`.
+`Δt*=change_factor^(k*m)`, where `m=(numiter-optiter)/(maxiter-optiter)`.
 In this expression, `maxiter` and `optiter` are the maximum and optimum 
 number of iterations for the nonlinear solver. 
 `optiter=floor(maxiter*optiter_ratio)` and `maxiter` is obtained from 
 the nonlinear solver (via `getmaxiter(s)`)
 
 If `numiter=maxiter`, then `m=1` and the time step update is the same as
-for a non-converged solution. 
+for a non-converged solution if `k=1`. Note that `k>0`, `change_factor∈[0,1]`,
+and `optiter_ratio∈[0,1]` are expected, otherwise warnings are thrown. 
 """
 struct AdaptiveTimeStepper{T}
     t_start::T
@@ -83,13 +84,14 @@ struct AdaptiveTimeStepper{T}
     Δt_max::T
     change_factor::T
     optiter_ratio::T
+    k::T
     Δt::ScalarWrapper{T}
 end
 
 function AdaptiveTimeStepper(
     Δt_init::T, t_end::T; 
     t_start=zero(T), Δt_min=Δt_init, Δt_max=typemax(T), 
-    change_factor::T=T(0.5), optiter_ratio::T=T(0.5)) where T
+    change_factor::T=T(0.5), optiter_ratio::T=T(0.5), k=one(T)) where T
     # Checks
     t_start > t_end && throw(ArgumentError("t_start=$t_start must be < t_end=$t_end"))
     Δt_min > Δt_max && throw(ArgumentError("Δt_min=$Δt_min must be < Δt_max=$Δt_max"))
@@ -103,10 +105,11 @@ function AdaptiveTimeStepper(
     if !(0<optiter_ratio<1)
         @warn "optiter_ratio=$optiter_ratio ∉ [0,1] ⇒ strange adaptivity behavior expected"
     end
+    k<0 && @warn "k=$k < 0 ⇒ strange adaptivity behavior expected"
 
     return AdaptiveTimeStepper(
         t_start, t_end, Δt_init, Δt_min, Δt_max,
-        change_factor, optiter_ratio, ScalarWrapper(Δt_init))
+        change_factor, optiter_ratio, k, ScalarWrapper(Δt_init))
 end
 
 initial_time(ts::AdaptiveTimeStepper) = ts.t_start 
