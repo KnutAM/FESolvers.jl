@@ -21,7 +21,7 @@ FerriteSolvers.getnumiter(::Nothing) = 1
 FerriteSolvers.getmaxiter(::Nothing) = 4
 
 @testset "timesteppers" begin
-    #=
+    
     @testset "FixedTimeStepper" begin
         t = sort(rand(100))
         solver = FerriteSolver(nothing, FixedTimeStepper(t))
@@ -30,7 +30,7 @@ FerriteSolvers.getmaxiter(::Nothing) = 4
 
         @test_throws FerriteSolvers.ConvergenceError run_timestepper(solver, (time, args...) -> time < sum(t)/length(t))
     end
-    =#
+    
     @testset "AdaptiveTimeStepper" begin
         # Errors 
         @test_throws ArgumentError AdaptiveTimeStepper(10.0, 0.1) # Flip Δt_init and t_end
