@@ -6,9 +6,6 @@ by using the solver of type `NLS`.
 """
 function solve_nonlinear! end
 
-# Default functions overloaded by specific nonlinear solvers
-getoptiter(s) = Int(floor(getmaxiter(s)/2))
-
 # Specific nonlinear solvers
 """
     NewtonSolver(;maxiter=10, tolerance=1.e-6, optiter=maxiter/2)
@@ -21,16 +18,14 @@ of iterations, if used together with an adaptive time stepper.
 struct NewtonSolver{LS,T}
     linsolver::LS
     maxiter::Int 
-    optiter::Int        
     tolerance::T    
     numiter::ScalarWrapper{Int} # Last step number of iterations
     residuals::Vector{T}        # Last step residual history
 end
 
-function NewtonSolver(;linsolver=BackslashSolver(), maxiter=10, tolerance=1.e-6, optiter=nothing)
+function NewtonSolver(;linsolver=BackslashSolver(), maxiter=10, tolerance=1.e-6)
     residuals = zeros(typeof(tolerance), maxiter+1)
-    optiter_ = isnothing(optiter) ? Int(round(maxiter/2)) : optiter
-    return NewtonSolver(linsolver, maxiter, optiter_, tolerance, ScalarWrapper(0), residuals)
+    return NewtonSolver(linsolver, maxiter, tolerance, ScalarWrapper(0), residuals)
 end
 
 function reset_state!(s::NewtonSolver)
@@ -45,7 +40,6 @@ end
 
 getmaxiter(s::NewtonSolver) = s.maxiter
 getnumiter(s::NewtonSolver) = s.numiter[]
-getoptiter(s::NewtonSolver) = s.optiter
 
 function Base.show(s::NewtonSolver)
     println("Newton solver has used $(s.numiter[]) iterations")

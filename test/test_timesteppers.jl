@@ -19,7 +19,6 @@ end
 # Dummy overloads for testing
 FerriteSolvers.getnumiter(::Nothing) = 1
 FerriteSolvers.getmaxiter(::Nothing) = 4
-FerriteSolvers.getoptiter(::Nothing) = 2
 
 @testset "timesteppers" begin
     #=
@@ -33,6 +32,16 @@ FerriteSolvers.getoptiter(::Nothing) = 2
     end
     =#
     @testset "AdaptiveTimeStepper" begin
+        # Errors 
+        @test_throws ArgumentError AdaptiveTimeStepper(10.0, 0.1) # Flip Δt_init and t_end
+        @test_throws ArgumentError AdaptiveTimeStepper(0.1, 10.0; t_start=20.0)
+        @test_throws ArgumentError AdaptiveTimeStepper(0.1, 10.0; Δt_max=0.01)
+        # Warnings
+        @test_logs (:warn,) match_mode=:any AdaptiveTimeStepper(0.1, 10.0; change_factor=1.2)
+        @test_logs (:warn,) match_mode=:any AdaptiveTimeStepper(0.1, 10.0; change_factor=-0.2)
+        @test_logs (:warn,) match_mode=:any AdaptiveTimeStepper(0.1, 10.0; optiter_ratio=1.2)
+        @test_logs (:warn,) match_mode=:any AdaptiveTimeStepper(0.1, 10.0; optiter_ratio=-0.2)
+
         t_end = 2.0
         Δt = 0.1
         Δt_min = 0.05
