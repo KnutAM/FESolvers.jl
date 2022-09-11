@@ -37,7 +37,7 @@ value and is not an actual step.
 struct FixedTimeStepper{T}
     t::Vector{T}
 end
-function FixedTimeStepper(num_steps::Int, Δt=1, t_start=zero(Δt))
+function FixedTimeStepper(;num_steps::Int, Δt=1, t_start=zero(Δt))
     return FixedTimeStepper(t_start .+ collect(0:Δt:((num_steps)*Δt)))
 end
 
