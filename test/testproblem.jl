@@ -45,7 +45,8 @@ Rosenbrock() = Rosenbrock([-1.0,1.0], zeros(2), zeros(2,2), zeros(0))
 
 FerriteSolvers.getunknowns(p::Rosenbrock) = p.x
 FerriteSolvers.getresidual(p::Rosenbrock) = p.r
-FerriteSolvers.getsystemmatrix(p::Rosenbrock,s::NewtonSolver) = p.drdx
+FerriteSolvers.getsystemmatrix(p::Rosenbrock, ::NewtonSolver) = p.drdx
+FerriteSolvers.getjacobian(p::Rosenbrock) = p.drdx # For TestNLSolver 
 FerriteSolvers.calculate_energy(p::Rosenbrock,x) = 100*(x[2] - x[1]^2)^2 + (1-x[1])^2
 FerriteSolvers.update_to_next_step!(p::Rosenbrock, time) = nothing
 function FerriteSolvers.update_problem!(p::Rosenbrock, Δx=nothing)

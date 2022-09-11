@@ -69,11 +69,14 @@ Returns the iteration tolerance for the solver
 """
 gettolerance(nlsolver::Union{NewtonSolver,SteepestDescent}) = nlsolver.tolerance
 
+reset_state!(args...) = nothing
 
 function reset_state!(s::Union{NewtonSolver,SteepestDescent})
     fill!(s.numiter, 0)
     fill!(s.residuals, 0)
 end
+
+update_state!(args...) = nothing
 
 function update_state!(s::Union{NewtonSolver,SteepestDescent}, r)
     s.numiter .+= 1
@@ -88,7 +91,7 @@ function solve_nonlinear!(solver::FerriteSolver, problem)
         check_convergence_criteria(problem, nlsolver) && return true
         update_unknowns!(problem, nlsolver, iter)
     end
-    check_convergence_criteria(problem, solver) && return true
+    check_convergence_criteria(problem, nlsolver) && return true
     return false
 end
 
