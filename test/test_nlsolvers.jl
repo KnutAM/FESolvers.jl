@@ -13,4 +13,8 @@
         @test all(isapprox.(problem.x, 1.0; atol=1e-5))
     end
 
+    # Test that it runs properly when it doesn't converge 
+    newton = NewtonSolver(;tolerance=-1.0)
+    converged = FerriteSolvers.solve_nonlinear!(newton, Rosenbrock())
+    @test !converged
 end
