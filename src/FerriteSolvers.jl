@@ -22,7 +22,7 @@ struct FerriteSolver{NLS,TS}
     nlsolver::NLS 
     timestepper::TS
 end
-FerriteSolver(nlsolver, timestepper) = FerriteSolver(;nlsolver, timestepper)
+FerriteSolver(;nlsolver, timestepper) = FerriteSolver(nlsolver, timestepper)
 
 include("userfunctions.jl")
 include("linearsolvers.jl")
