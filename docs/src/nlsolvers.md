@@ -25,7 +25,7 @@ SteepestDescent
 ```
 
 ### Linesearch
-Some nonlinear solvers can use linesearch as a compliment, 
+Some nonlinear solvers can use linesearch as a complement, 
 and the following linesearches are included. 
 ```@docs
 NoLineSearch
