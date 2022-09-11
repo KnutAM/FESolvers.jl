@@ -57,7 +57,7 @@ function update_problem! end
 
 
 """
-    calculate_convergence_criterion(problem)
+    calculate_convergence_measure(problem)
 
 Calculate a value to be compared with the tolerance of the nonlinear solver. 
 A standard case when using [Ferrite.jl](https://github.com/Ferrite-FEM/Ferrite.jl)
@@ -65,7 +65,7 @@ is `norm(getresidual(problem)[Ferrite.free_dofs(dbcs)])`
 where `dbcs::Ferrite.ConstraintHandler`
 
 """
-function calculate_convergence_criterion end
+function calculate_convergence_measure end
 
 """
     handle_converged!(problem)

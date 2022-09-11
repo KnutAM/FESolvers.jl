@@ -25,9 +25,9 @@ Base.@kwdef struct ArmijoGoldstein{T} <: AbstractLineSearch
     τmin::T = 1e-5
 end
 
-linesearch!(problem,searchdirection,ls::NoLineSearch) = nothing
+linesearch!(searchdirection, problem, ls::NoLineSearch) = nothing
 
-function linesearch!(problem,searchdirection,ls::ArmijoGoldstein) 
+function linesearch!(searchdirection, problem, ls::ArmijoGoldstein)
     τ = ls.τ0; μ = ls.μ; β = ls.β
     𝐮 = getunknowns(problem)
     Π₀ = calculate_energy(problem,𝐮)
@@ -43,17 +43,6 @@ function linesearch!(problem,searchdirection,ls::ArmijoGoldstein)
     τ = max(ls.τmin,τ)
     searchdirection .*= τ
 end
-
-"""
-    getlinesearch(nlsolver)
-Returns the used linesearch of the nonlinear solver.
-"""
-getlinesearch(nlsolver) = nlsolver.linesearch
-"""
-    getmaxiter(nlsolver)
-Returns the maximum number of iterations allowed for the nonlinear solver
-"""
-getmaxiter(nlsolver) = nlsolver.maxiter
 
 """
     solve_nonlinear!(solver::FerriteSolver{<:NLS}, problem)
@@ -86,11 +75,6 @@ function NewtonSolver(;linsolver=BackslashSolver(), linesearch=NoLineSearch(), m
     return NewtonSolver(linsolver, linesearch, maxiter, tolerance, [zero(maxiter)], residuals)
 end
 
-function reset!(s::NewtonSolver)
-    fill!(s.numiter, 0)
-    fill!(s.residuals, 0)
-end
-
 function Base.show(s::NewtonSolver)
     println("Newton solver has used $(s.numiter[1]) iterations")
     println("residuals")
@@ -120,33 +104,61 @@ end
 
 getsystemmatrix(problem,solver::SteepestDescent) = LinearAlgebra.I
 
-function reset!(s::SteepestDescent)
-    fill!(s.numiter, 0)
-    fill!(s.residuals, 0)
-end
-
 function Base.show(s::SteepestDescent)
     println("Steepest Descent")
 end
 
-function solve_nonlinear!(solver::FerriteSolver{T}, problem) where T<:Union{SteepestDescent,NewtonSolver}
+"""
+    getlinesearch(nlsolver)
+Returns the used linesearch of the nonlinear solver.
+"""
+getlinesearch(nlsolver::Union{NewtonSolver,SteepestDescent}) = nlsolver.linesearch
+"""
+    getmaxiter(nlsolver)
+Returns the maximum number of iterations allowed for the nonlinear solver
+"""
+getmaxiter(nlsolver::Union{NewtonSolver,SteepestDescent}) = nlsolver.maxiter
+
+"""
+    gettolerance(nlsolver)
+Returns the iteration tolerance for the solver
+"""
+gettolerance(nlsolver::Union{NewtonSolver,SteepestDescent}) = nlsolver.tolerance
+
+
+function reset_state!(s::Union{NewtonSolver,SteepestDescent})
+    fill!(s.numiter, 0)
+    fill!(s.residuals, 0)
+end
+
+function update_state!(s::Union{NewtonSolver,SteepestDescent}, r)
+    s.numiter .+= 1
+    s.residuals[s.numiter[1]] = r 
+end
+
+function check_convergence_criteria(problem, nlsolver)
+    r = calculate_convergence_measure(problem)
+    update_state!(nlsolver, r)
+    return r < gettolerance(nlsolver)
+end
+
+function solve_nonlinear!(solver::FerriteSolver, problem)
     nlsolver = solver.nlsolver
     maxiter = getmaxiter(nlsolver)
-    tol = nlsolver.tolerance
-    ls = getlinesearch(nlsolver)
-    Δa = zero(getunknowns(problem))
-    reset!(nlsolver)
-    for i in 1:(maxiter+1)
-        nlsolver.numiter .= i
-        nlsolver.residuals[i] = calculate_convergence_criterion(problem)
-        if nlsolver.residuals[i] < tol
-            return true
-        end
-        i>maxiter && return false # Did not converge
-        r = getresidual(problem)
-        K = getsystemmatrix(problem,nlsolver)
-        update_guess!(Δa, K, r, nlsolver.linsolver)
-        linesearch!(problem,Δa,ls) 
-        update_problem!(problem, Δa)
+    reset_state!(nlsolver)
+    for iter in 1:maxiter
+        check_convergence_criteria(problem, nlsolver) && return true
+        update_unknowns!(problem, nlsolver, iter)
     end
+    check_convergence_criteria(problem, solver) && return true
+    return false
+end
+
+function update_unknowns!(problem, nlsolver::Union{SteepestDescent,NewtonSolver}, iter)
+    Δa = similar(getunknowns(problem))  # TODO: Should have a solvercache for these
+    r = getresidual(problem)
+    K = getsystemmatrix(problem,nlsolver)
+    solve_linear!(Δa, K, r, nlsolver.linsolver)
+    linesearch!(Δa, problem, getlinesearch(nlsolver)) # Scale Δa
+    update_problem!(problem, Δa)
 end

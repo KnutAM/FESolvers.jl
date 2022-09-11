@@ -30,7 +30,7 @@ function FerriteSolvers.update_problem!(p::TestProblem, Δx=nothing)
     p.drdx .= ForwardDiff.jacobian(x_->residual(x_, p.f), p.x)
 end
 
-FerriteSolvers.calculate_convergence_criterion(p::TestProblem) = norm(p.r)
+FerriteSolvers.calculate_convergence_measure(p::TestProblem) = norm(p.r)
 FerriteSolvers.handle_converged!(::TestProblem) = nothing # Not used
 FerriteSolvers.postprocess!(p::TestProblem, step) = push!(p.rv, norm(p.r))
 
@@ -55,7 +55,7 @@ function FerriteSolvers.update_problem!(p::Rosenbrock, Δx=nothing)
     p.r .= dfdx
     p.drdx .= d²fdxdx
 end
-FerriteSolvers.calculate_convergence_criterion(p::Rosenbrock) = norm(p.r)
+FerriteSolvers.calculate_convergence_measure(p::Rosenbrock) = norm(p.r)
 FerriteSolvers.handle_converged!(::Rosenbrock) = nothing # Not used
 FerriteSolvers.postprocess!(p::Rosenbrock, step) = push!(p.rv, norm(p.r))
 
