@@ -17,7 +17,8 @@ function getresidual end
 Return the jacobian `drdx`, or approximations thereof.
 
 Must be defined for `NewtonSolver`, but can also be 
-defined via `[`getsystemmatrix`](@ref)(problem, ::NewtonSolver)`
+defined by the advanced API alternative [`getsystemmatrix`](@ref): 
+`getsystemmatrix(problem, ::NewtonSolver)`
 """
 function getjacobian end
 
@@ -28,12 +29,13 @@ considering solving `r(x)=0` as a minimization problem of `f(x)`
 where `r=∇f`. The descent direction is then `p = K⁻¹ ∇f`
 
 Used by the `SteepestDescent` solver, and defaults to `I` if not defined. 
-Can also be defined via `[`getsystemmatrix`](@ref)(problem, ::SteepestDescent)`
+The advanced API alternative is [`getsystemmatrix`](@ref): 
+`getsystemmatrix(problem, ::SteepestDescent)`
 """
 getdescentpreconditioner(::Any) = LinearAlgebra.I
 
 """
-    getsystemmatrix(problem,solver)
+    getsystemmatrix(problem,nlsolver)
 
 Return the system matrix of the problem. For a Newton solver this
 method should return the Jacobian, while for a steepest descent method
@@ -54,41 +56,44 @@ function calculate_energy end
 """
     update_to_next_step!(problem, time)
 
-Update prescribed values, external loads etc. for the given time
-Called in the beginning of each new time step. 
-Note: For adaptive time stepping, it may be called with a lower 
+Update prescribed values, external loads etc. for the given time.
+
+This function is called in the beginning of each new time step. 
+Note that for adaptive time stepping, it may be called with a lower 
 time than the previous time if the solution did not converge.
 """
 function update_to_next_step! end
 
 """
-    update_problem!(problem, Δx=0*getunknowns(problem))
+    update_problem!(problem)
+    update_problem!(problem, Δx)
 
 Assemble the residual and stiffness for `x+=Δx`. 
 
 - Some linear solvers may be inaccurate, and if modified stiffness is used 
   to enforce constraints on `x`, it is good the force `Δx=0` on these
   components inside this function. 
-- Note that the function must also support only one argument: `problem`,
-  this version is called the first time after 
-  `update-update_to_next_step!` and should default to `Δx=0`
+- `Δx` is not given in the first call after [`update_to_next_step!`](@ref)
+  in which case no change of `x` should be made. 
 """
 function update_problem! end
 
 
 """
-    calculate_convergence_measure(problem)
+    calculate_convergence_measure(problem) -> AbstractFloat
 
 Calculate a value to be compared with the tolerance of the nonlinear solver. 
 A standard case when using [Ferrite.jl](https://github.com/Ferrite-FEM/Ferrite.jl)
 is `norm(getresidual(problem)[Ferrite.free_dofs(dbcs)])` 
-where `dbcs::Ferrite.ConstraintHandler`
+where `dbcs::Ferrite.ConstraintHandler`.
+
+The advanced API alternative is [`check_convergence_criteria`](@ref)
 
 """
 function calculate_convergence_measure end
 
 """
-    check_convergence_criteria(problem, nlsolver)
+    check_convergence_criteria(problem, nlsolver) -> Bool
 
 Check if `problem` has converged and update the state 
 of `nlsolver` wrt. number of iterations and a convergence
