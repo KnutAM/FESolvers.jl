@@ -1,8 +1,8 @@
 # Linear solvers
-A linear solver should support the `update_guess!` function specified below. 
+A linear solver should support the `solve_linear!` function specified below. 
 
 ```@docs
-FerriteSolvers.update_guess!
+FerriteSolvers.solve_linear!
 ```
 
 ## Implemented Solvers
