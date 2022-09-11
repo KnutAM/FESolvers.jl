@@ -35,20 +35,9 @@ include("timesteppers.jl")
 
 Solve a time-dependent problem `r(x(t),t)=0` for `x(t)`, 
 stepping throught the time `t`, using the `solver`.
-The following functions must be defined for the 
-user-defined `problem`:
 
-- `getunknowns(problem)`
-- `getresidual(problem)`
-- `getsystemmatrix(problem,solver)`
-- `update_to_next_step!(problem, t)`
-- `update_problem!(problem, Δx)`
-- `calculate_convergence_criterion(problem)`
-- `handle_converged!(problem)`
-
-Additionally, one can define `postprocess!(problem, step)`
-For details on each function above, please see the respective
-function's documentation under [User problem](@ref)
+For details on the functions that should be defined for `problem`,
+see [User problem](@ref)
 """
 function solve_ferrite_problem!(solver::FerriteSolver, problem)
     t = initial_time(solver.timestepper)
