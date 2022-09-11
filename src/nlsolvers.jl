@@ -1,8 +1,8 @@
 """
-    solve_nonlinear!(solver::FerriteSolver{<:NLS}, problem)
+    solve_nonlinear!(nlsolver, problem)
 
-Solve one step in the nonlinear `problem`, given as `r(x) = 0`,
-by using the solver of type `NLS`. 
+Solve the current time step in the nonlinear `problem`, (`r(x) = 0`),
+by using the nonlinear solver: `nlsolver`. 
 """
 function solve_nonlinear! end
 
