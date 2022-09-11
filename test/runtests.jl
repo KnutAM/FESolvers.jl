@@ -4,21 +4,22 @@ using Test
 include("testproblem.jl")
 include("TestNLSolver.jl")
 
+
+include("test_linearsolvers.jl")
+include("test_nlsolvers.jl")
+include("test_timesteppers.jl")
+
 @testset "FerriteSolver.jl" begin
     tol = 1.e-6
     problem = TestProblem()
-    solver = FerriteSolver(NewtonSolver(;tolerance=tol), FixedTimeStepper([0.0, 1.0, 2.0, 3.0]))
+    timehist = [0.0, 1.0, 2.0, 3.0]
+    solver = FerriteSolver(NewtonSolver(;tolerance=tol), FixedTimeStepper(timehist))
     solve_ferrite_problem!(solver, problem)
-    @test all(isapprox.(problem.rv, 0.0; atol=tol))
-    ls = ArmijoGoldstein(μ=1e-4, β=0.5, τ0=1.0)
-    steepestdescent= FerriteSolver(SteepestDescent(;maxiter=30000, tolerance=1e-3, linesearch=ls), FixedTimeStepper([0.0, 0.1]))
-    newton_ls = FerriteSolver(NewtonSolver(;maxiter=30, tolerance=tol, linesearch=ls), FixedTimeStepper([0.0, 0.1]))
-    newton = FerriteSolver(NewtonSolver(;maxiter=30, tolerance=tol), FixedTimeStepper([0.0, 0.1]))
-    custom = FerriteSolver(TestNLSolver(;maxiter=30, tolerance=tol, ls=ls), FixedTimeStepper([0.0, 0.1]))
-    for solver in [steepestdescent, newton_ls, newton, custom]
-        problem = Rosenbrock() 
-        solve_ferrite_problem!(solver, problem)
-        @test all(isapprox.(problem.rv, 0.0; atol=1e-2))
-        @test all(isapprox.(problem.x, 1.0; atol=1e-5))
-    end
+    @test problem.tv ≈ timehist[2:end]  # First time not postprocessed currently, should it?
+    @test length(problem.conv) == (length(timehist)-1)  # Check handle_converged calls
+    @test all(norm.(problem.rv) .<= tol)                # Check that all steps converged
+    # Check that saved solutions are indeed the same solutions
+    @test all(isapprox.(residual.(problem.xv, problem.fun.(problem.tv)), problem.rv))
+
 end
+

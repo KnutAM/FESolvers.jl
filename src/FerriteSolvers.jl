@@ -48,8 +48,7 @@ function solve_ferrite_problem!(solver::FerriteSolver, problem)
         update_to_next_step!(problem, t)
         # Can make improved guess here based on previous values and send to update_problem! 
         # Alternatively, this can be done inside update_to_next_step! by the user if desired. 
-        update_problem!(problem)
-        converged = solve_nonlinear!(solver, problem)
+        converged = solve_nonlinear!(solver.nlsolver, problem)
         if converged
             handle_converged!(problem)
             postprocess!(problem, step)

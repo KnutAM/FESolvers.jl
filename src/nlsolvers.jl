@@ -113,10 +113,10 @@ function update_state!(s::Union{NewtonSolver,SteepestDescent}, r)
     s.residuals[s.numiter[1]] = r 
 end
 
-function solve_nonlinear!(solver::FerriteSolver, problem)
-    nlsolver = solver.nlsolver
+function solve_nonlinear!(nlsolver, problem)
     maxiter = getmaxiter(nlsolver)
     reset_state!(nlsolver)
+    update_problem!(problem)
     for iter in 1:maxiter
         check_convergence_criteria(problem, nlsolver) && return true
         Δa = calculate_update(problem, nlsolver, iter)
