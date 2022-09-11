@@ -19,7 +19,7 @@ TestProblem() = TestProblem(zeros(3), zeros(3), zeros(3,3), t->[exp(t); cos(t); 
 
 FerriteSolvers.getunknowns(p::TestProblem) = p.x
 FerriteSolvers.getresidual(p::TestProblem) = p.r
-FerriteSolvers.getjacobian(p::TestProblem) = p.drdx
+FerriteSolvers.getsystemmatrix(p::TestProblem,s::NewtonSolver) = p.drdx
 function FerriteSolvers.update_to_next_step!(p::TestProblem, time)
     p.f .= p.fun(time)
 end
@@ -33,3 +33,29 @@ end
 FerriteSolvers.calculate_convergence_criterion(p::TestProblem) = norm(p.r)
 FerriteSolvers.handle_converged!(::TestProblem) = nothing # Not used
 FerriteSolvers.postprocess!(p::TestProblem, step) = push!(p.rv, norm(p.r))
+
+struct Rosenbrock{T}
+    x::Vector{T}
+    r::Vector{T}
+    drdx::Matrix{T}
+    rv::Vector{T}
+end
+
+Rosenbrock() = Rosenbrock([-1.0,1.0], zeros(2), zeros(2,2), zeros(0))
+
+FerriteSolvers.getunknowns(p::Rosenbrock) = p.x
+FerriteSolvers.getresidual(p::Rosenbrock) = p.r
+FerriteSolvers.getsystemmatrix(p::Rosenbrock,s::NewtonSolver) = p.drdx
+FerriteSolvers.calculate_energy(p::Rosenbrock,x) = 100*(x[2] - x[1]^2)^2 + (1-x[1])^2
+FerriteSolvers.update_to_next_step!(p::Rosenbrock, time) = nothing
+function FerriteSolvers.update_problem!(p::Rosenbrock, Δx=nothing)
+    isnothing(Δx) || (p.x .+= Δx)
+    dfdx = ForwardDiff.gradient(x_->FerriteSolvers.calculate_energy(p,x_),p.x)
+    d²fdxdx = ForwardDiff.hessian(x_->FerriteSolvers.calculate_energy(p,x_),p.x)
+    p.r .= dfdx
+    p.drdx .= d²fdxdx
+end
+FerriteSolvers.calculate_convergence_criterion(p::Rosenbrock) = norm(p.r)
+FerriteSolvers.handle_converged!(::Rosenbrock) = nothing # Not used
+FerriteSolvers.postprocess!(p::Rosenbrock, step) = push!(p.rv, norm(p.r))
+

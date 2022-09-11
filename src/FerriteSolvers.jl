@@ -1,8 +1,10 @@
 module FerriteSolvers
+import LinearAlgebra
 export solve_ferrite_problem!
 
 export FerriteSolver
-export NewtonSolver
+export NewtonSolver, SteepestDescent
+export ArmijoGoldstein, NoLineSearch
 export FixedTimeStepper
 export BackslashSolver
 
@@ -37,7 +39,7 @@ user-defined `problem`:
 
 - `getunknowns(problem)`
 - `getresidual(problem)`
-- `getjacobian(problem)`
+- `getsystemmatrix(problem,solver)`
 - `update_to_next_step!(problem, t)`
 - `update_problem!(problem, Δx)`
 - `calculate_convergence_criterion(problem)`

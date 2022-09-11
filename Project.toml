@@ -3,6 +3,9 @@ uuid = "79314e9b-2e6f-4d6d-a72d-515aa2604984"
 authors = ["Knut Andreas Meyer and contributors"]
 version = "0.1.0"
 
+[deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+
 [compat]
 julia = "1"
 
