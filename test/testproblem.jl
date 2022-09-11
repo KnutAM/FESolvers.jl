@@ -19,7 +19,7 @@ TestProblem() = TestProblem(zeros(3), zeros(3), zeros(3,3), t->[exp(t); cos(t); 
 
 FerriteSolvers.getunknowns(p::TestProblem) = p.x
 FerriteSolvers.getresidual(p::TestProblem) = p.r
-FerriteSolvers.getsystemmatrix(p::TestProblem,s::NewtonSolver) = p.drdx
+FerriteSolvers.getjacobian(p::TestProblem) = p.drdx
 function FerriteSolvers.update_to_next_step!(p::TestProblem, time)
     p.f .= p.fun(time)
 end

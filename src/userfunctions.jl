@@ -12,6 +12,20 @@ Return the current residual vector of the problem
 """
 function getresidual end
 
+""" getjacobian(problem)
+
+Return the jacobian `drdx`, or approximations thereof
+"""
+function getjacobian end
+
+""" getdescentpreconditioner(problem)
+
+Return a preconditioner `K` for calculating the descent direction `p`,
+considering solving `r(x)=0` as a minimization problem of `f(x)`
+where `r=∇f`. The descent direction is then `p = K⁻¹ ∇f` 
+"""
+getdescentpreconditioner(::Any) = LinearAlgebra.I
+
 """
     getsystemmatrix(problem,solver)
 
@@ -66,6 +80,19 @@ where `dbcs::Ferrite.ConstraintHandler`
 
 """
 function calculate_convergence_measure end
+
+"""
+    check_convergence_criteria(problem, nlsolver)
+
+Check if `problem` has converged and update the state 
+of `nlsolver` wrt. number of iterations and a convergence
+measure if applicable.
+"""
+function check_convergence_criteria(problem, nlsolver)
+    r = calculate_convergence_measure(problem)
+    update_state!(nlsolver, r)
+    return r < gettolerance(nlsolver)
+end
 
 """
     handle_converged!(problem)

@@ -28,6 +28,8 @@ function NewtonSolver(;linsolver=BackslashSolver(), linesearch=NoLineSearch(), m
     residuals = zeros(typeof(tolerance), maxiter+1)
     return NewtonSolver(linsolver, linesearch, maxiter, tolerance, [zero(maxiter)], residuals)
 end
+getsystemmatrix(problem,::NewtonSolver) = getjacobian(problem)
+
 
 @doc raw"""
     SteepestDescent(;maxiter=10, tolerance=1.e-6)
@@ -47,8 +49,7 @@ Base.@kwdef struct SteepestDescent{LineSearch,LinearSolver,T}
     numiter::Vector{Int} = [zero(maxiter)]  # Last step number of iterations
     residuals::Vector{T} = zeros(typeof(tolerance),maxiter+1)  # Last step residual history
 end
-
-getsystemmatrix(problem,solver::SteepestDescent) = LinearAlgebra.I
+getsystemmatrix(problem,::SteepestDescent) = getdescentpreconditioner(problem)
 
 
 """
@@ -77,12 +78,6 @@ end
 function update_state!(s::Union{NewtonSolver,SteepestDescent}, r)
     s.numiter .+= 1
     s.residuals[s.numiter[1]] = r 
-end
-
-function check_convergence_criteria(problem, nlsolver)
-    r = calculate_convergence_measure(problem)
-    update_state!(nlsolver, r)
-    return r < gettolerance(nlsolver)
 end
 
 function solve_nonlinear!(solver::FerriteSolver, problem)
