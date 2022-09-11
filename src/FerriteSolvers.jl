@@ -4,9 +4,9 @@ export solve_ferrite_problem!
 
 export FerriteSolver
 export NewtonSolver, SteepestDescent
-export ArmijoGoldstein, NoLineSearch
-export FixedTimeStepper
+export NoLineSearch, ArmijoGoldstein
 export BackslashSolver
+export FixedTimeStepper
 
 struct ConvergenceError <: Exception
     msg::String
@@ -26,6 +26,7 @@ FerriteSolver(;nlsolver, timestepper) = FerriteSolver(nlsolver, timestepper)
 
 include("userfunctions.jl")
 include("linearsolvers.jl")
+include("linesearchers.jl")
 include("nlsolvers.jl")
 include("timesteppers.jl")
 
