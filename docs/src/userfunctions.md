@@ -5,7 +5,7 @@ in order for the solver to solve your `problem`.
 While some functions are always required, some are only required by certain solvers. 
 Furthermore, a two-level API exist: Simple and advanced. 
 The simple API does not expose which solver is used, while the advanced API
-requires you to define different methods depending on the type of solver. 
+requires you to dispatch on the type of solver. 
 
 ## Applicable to all solvers
 ```@docs
