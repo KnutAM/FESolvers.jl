@@ -66,7 +66,6 @@ function solve_ferrite_problem!(solver::FerriteSolver, problem)
             postprocess!(problem, step)
         else    # Should be an option if this should print or not...
             println("the nonlinear solver didn't converge")
-            show(solver.nlsolver)
         end
     end
 end

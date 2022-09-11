@@ -29,14 +29,6 @@ function NewtonSolver(;linsolver=BackslashSolver(), linesearch=NoLineSearch(), m
     return NewtonSolver(linsolver, linesearch, maxiter, tolerance, [zero(maxiter)], residuals)
 end
 
-function Base.show(s::NewtonSolver)
-    println("Newton solver has used $(s.numiter[1]) iterations")
-    println("residuals")
-    for i in 1:s.numiter[1]
-        println("r[$i] = $(s.residuals[i])")
-    end
-end
-
 @doc raw"""
     SteepestDescent(;maxiter=10, tolerance=1.e-6)
 
@@ -58,9 +50,6 @@ end
 
 getsystemmatrix(problem,solver::SteepestDescent) = LinearAlgebra.I
 
-function Base.show(s::SteepestDescent)
-    println("Steepest Descent")
-end
 
 """
     getlinesearch(nlsolver)
