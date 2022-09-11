@@ -7,7 +7,7 @@ FerriteSolvers.solve_nonlinear!
 
 It can do so, by supporting the following functions
 ```@docs
-FerriteSolvers.update_unknowns!
+FerriteSolvers.calculate_update
 FerriteSolvers.getmaxiter
 FerriteSolvers.gettolerance
 ```
