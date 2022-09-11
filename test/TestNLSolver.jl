@@ -7,7 +7,7 @@ end
 FerriteSolvers.getmaxiter(s::TestNLSolver) = s.maxiter
 FerriteSolvers.gettolerance(s::TestNLSolver) = s.tolerance
 
-function FerriteSolvers.update_unknowns!(problem, nlsolver::TestNLSolver, iter)
+function FerriteSolvers.calculate_update(problem, nlsolver::TestNLSolver, iter)
     Δa = -FerriteSolvers.getjacobian(problem)\FerriteSolvers.getresidual(problem)
     iter == 1 && FerriteSolvers.linesearch!(Δa, problem, nlsolver.ls)
     FerriteSolvers.update_problem!(problem, Δa)

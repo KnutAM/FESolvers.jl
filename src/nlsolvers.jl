@@ -7,6 +7,48 @@ by using the solver of type `NLS`.
 function solve_nonlinear! end
 
 """
+    function calculate_update(problem, nlsolver, iter)
+
+According to the nonlinear solver, `nlsolver`, at iteration `iter`,
+calculate the update, `Δx` to the unknowns `x`.
+"""
+function calculate_update end
+
+"""
+    getmaxiter(nlsolver)
+
+Returns the maximum number of iterations allowed for the nonlinear solver
+"""
+function getmaxiter end
+
+"""
+    gettolerance(nlsolver)
+
+Returns the iteration tolerance for the solver
+"""
+function gettolerance end
+
+"""
+    update_state!(nlsolver, r)
+
+A nonlinear solver may solve information about its convergence state.
+`r` is the output from [`calculate_convergence_measure`](@ref) when 
+this function is called by the default implementation of 
+[`check_convergence_criteria`](@ref). 
+`update_state!` is optional to implement
+"""
+update_state!(::Any, _) = nothing
+
+"""
+    reset_state!(nlsolver)
+
+If [`update_state!`](@ref) is implemented, this function is used to 
+reset its state at the beginning of each new time step. 
+"""
+reset_state!(::Any) = nothing
+
+
+"""
     NewtonSolver(;linsolver=BackslashSolver(), linesearch=NoLineSearch(), maxiter=10, tolerance=1.e-6)
 
 Use the standard NewtonRaphson solver to solve the nonlinear 
@@ -57,26 +99,14 @@ getsystemmatrix(problem,::SteepestDescent) = getdescentpreconditioner(problem)
 Returns the used linesearch of the nonlinear solver.
 """
 getlinesearch(nlsolver::Union{NewtonSolver,SteepestDescent}) = nlsolver.linesearch
-"""
-    getmaxiter(nlsolver)
-Returns the maximum number of iterations allowed for the nonlinear solver
-"""
+
 getmaxiter(nlsolver::Union{NewtonSolver,SteepestDescent}) = nlsolver.maxiter
-
-"""
-    gettolerance(nlsolver)
-Returns the iteration tolerance for the solver
-"""
 gettolerance(nlsolver::Union{NewtonSolver,SteepestDescent}) = nlsolver.tolerance
-
-reset_state!(args...) = nothing
 
 function reset_state!(s::Union{NewtonSolver,SteepestDescent})
     fill!(s.numiter, 0)
     fill!(s.residuals, 0)
 end
-
-update_state!(args...) = nothing
 
 function update_state!(s::Union{NewtonSolver,SteepestDescent}, r)
     s.numiter .+= 1
@@ -89,17 +119,18 @@ function solve_nonlinear!(solver::FerriteSolver, problem)
     reset_state!(nlsolver)
     for iter in 1:maxiter
         check_convergence_criteria(problem, nlsolver) && return true
-        update_unknowns!(problem, nlsolver, iter)
+        Δa = calculate_update(problem, nlsolver, iter)
+        update_problem!(problem, Δa)
     end
     check_convergence_criteria(problem, nlsolver) && return true
     return false
 end
 
-function update_unknowns!(problem, nlsolver::Union{SteepestDescent,NewtonSolver}, iter)
+function calculate_update(problem, nlsolver::Union{SteepestDescent,NewtonSolver}, iter)
     Δa = similar(getunknowns(problem))  # TODO: Should have a solvercache for these
     r = getresidual(problem)
     K = getsystemmatrix(problem,nlsolver)
     solve_linear!(Δa, K, r, nlsolver.linsolver)
     linesearch!(Δa, problem, getlinesearch(nlsolver)) # Scale Δa
-    update_problem!(problem, Δa)
+    return Δa
 end
