@@ -14,7 +14,10 @@ function getresidual end
 
 """ getjacobian(problem)
 
-Return the jacobian `drdx`, or approximations thereof
+Return the jacobian `drdx`, or approximations thereof.
+
+Must be defined for `NewtonSolver`, but can also be 
+defined via `[`getsystemmatrix`](@ref)(problem, ::NewtonSolver)`
 """
 function getjacobian end
 
@@ -22,7 +25,10 @@ function getjacobian end
 
 Return a preconditioner `K` for calculating the descent direction `p`,
 considering solving `r(x)=0` as a minimization problem of `f(x)`
-where `r=∇f`. The descent direction is then `p = K⁻¹ ∇f` 
+where `r=∇f`. The descent direction is then `p = K⁻¹ ∇f`
+
+Used by the `SteepestDescent` solver, and defaults to `I` if not defined. 
+Can also be defined via `[`getsystemmatrix`](@ref)(problem, ::SteepestDescent)`
 """
 getdescentpreconditioner(::Any) = LinearAlgebra.I
 
