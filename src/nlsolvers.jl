@@ -22,6 +22,13 @@ Returns the maximum number of iterations allowed for the nonlinear solver
 function getmaxiter end
 
 """
+    getnumiter(nlsolver)
+
+Returns the last number of iterations used by the nonlinear solver
+"""
+function getnumiter end
+
+"""
     gettolerance(nlsolver)
 
 Returns the iteration tolerance for the solver
@@ -62,13 +69,13 @@ struct NewtonSolver{LS,LSearch,T}
     linesearch::LSearch
     maxiter::Int 
     tolerance::T
-    numiter::Vector{Int}  # Last step number of iterations
+    numiter::ScalarWrapper{Int}  # Last step number of iterations
     residuals::Vector{T}  # Last step residual history
 end
 
 function NewtonSolver(;linsolver=BackslashSolver(), linesearch=NoLineSearch(), maxiter=10, tolerance=1.e-6)
     residuals = zeros(typeof(tolerance), maxiter+1)
-    return NewtonSolver(linsolver, linesearch, maxiter, tolerance, [zero(maxiter)], residuals)
+    return NewtonSolver(linsolver, linesearch, maxiter, tolerance, ScalarWrapper(0), residuals)
 end
 getsystemmatrix(problem,::NewtonSolver) = getjacobian(problem)
 
@@ -88,7 +95,7 @@ Base.@kwdef struct SteepestDescent{LineSearch,LinearSolver,T}
     linesearch::LineSearch = ArmijoGoldstein()
     maxiter::Int = 200
     tolerance::T = 1e-6
-    numiter::Vector{Int} = [zero(maxiter)]  # Last step number of iterations
+    numiter::ScalarWrapper{Int} = ScalarWrapper(0)  # Last step number of iterations
     residuals::Vector{T} = zeros(typeof(tolerance),maxiter+1)  # Last step residual history
 end
 getsystemmatrix(problem,::SteepestDescent) = getdescentpreconditioner(problem)
@@ -102,15 +109,17 @@ getlinesearch(nlsolver::Union{NewtonSolver,SteepestDescent}) = nlsolver.linesear
 
 getmaxiter(nlsolver::Union{NewtonSolver,SteepestDescent}) = nlsolver.maxiter
 gettolerance(nlsolver::Union{NewtonSolver,SteepestDescent}) = nlsolver.tolerance
+getnumiter(s::Union{NewtonSolver,SteepestDescent}) = s.numiter[]
+
 
 function reset_state!(s::Union{NewtonSolver,SteepestDescent})
-    fill!(s.numiter, 0)
+    s.numiter[] = 0
     fill!(s.residuals, 0)
 end
 
 function update_state!(s::Union{NewtonSolver,SteepestDescent}, r)
-    s.numiter .+= 1
-    s.residuals[s.numiter[1]] = r 
+    s.numiter[] += 1
+    s.residuals[s.numiter[]] = r 
 end
 
 function solve_nonlinear!(nlsolver, problem)

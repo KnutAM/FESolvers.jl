@@ -50,3 +50,112 @@ function update_time(s::FerriteSolver{<:Any,<:FixedTimeStepper}, t, step, conver
     end
     return s.timestepper.t[step+1], step+1
 end
+
+
+"""
+    AdaptiveTimeStepper(
+        Δt_init::T, t_end::T; 
+        t_start=zero(T), Δt_min=Δt_init, Δt_max=typemax(T), 
+        change_factor=T(0.5), optiter_ratio=T(0.5), k=one(T)) where T
+
+An adaptive time stepper with an initial step `Δt_init` and total  
+time `t_end`. Two ways of adaption:
+
+1. If the previous attempt did not converge, the time 
+step is reduced as `Δt*=change_factor` and the step is retried. 
+
+2. If convergence, the next time step depends on how many iterations was 
+required to converge; `numiter`. The time step is changed as 
+`Δt*=change_factor^(k*m)`, where `m=(numiter-optiter)/(maxiter-optiter)`.
+In this expression, `maxiter` and `optiter` are the maximum and optimum 
+number of iterations for the nonlinear solver. 
+`optiter=floor(maxiter*optiter_ratio)` and `maxiter` is obtained from 
+the nonlinear solver (via `getmaxiter(s)`)
+
+If `numiter=maxiter`, then `m=1` and the time step update is the same as
+for a non-converged solution if `k=1`. Note that `k>0`, `change_factor∈[0,1]`,
+and `optiter_ratio∈[0,1]` are expected, otherwise warnings are thrown. 
+"""
+struct AdaptiveTimeStepper{T}
+    t_start::T
+    t_end::T
+    Δt_init::T
+    Δt_min::T
+    Δt_max::T
+    change_factor::T
+    optiter_ratio::T
+    k::T
+    Δt::ScalarWrapper{T}
+end
+
+function AdaptiveTimeStepper(
+    Δt_init::T, t_end::T; 
+    t_start=zero(T), Δt_min=Δt_init, Δt_max=typemax(T), 
+    change_factor::T=T(0.5), optiter_ratio::T=T(0.5), k=one(T)) where T
+    # Checks
+    t_start > t_end && throw(ArgumentError("t_start=$t_start must be < t_end=$t_end"))
+    Δt_min > Δt_max && throw(ArgumentError("Δt_min=$Δt_min must be < Δt_max=$Δt_max"))
+    if Δt_min > (t_end-t_start)
+        throw(ArgumentError("Δt_min=$Δt_min must be >= t_end-t_start=$(t_end-t_start)"))
+    end
+    
+    if !(0<change_factor<1)
+        @warn "change_factor=$change_factor ∉ [0,1] ⇒ strange adaptivity behavior expected"
+    end
+    if !(0<optiter_ratio<1)
+        @warn "optiter_ratio=$optiter_ratio ∉ [0,1] ⇒ strange adaptivity behavior expected"
+    end
+    k<0 && @warn "k=$k < 0 ⇒ strange adaptivity behavior expected"
+
+    return AdaptiveTimeStepper(
+        t_start, t_end, Δt_init, Δt_min, Δt_max,
+        change_factor, optiter_ratio, k, ScalarWrapper(Δt_init))
+end
+
+initial_time(ts::AdaptiveTimeStepper) = ts.t_start 
+islaststep(ts::AdaptiveTimeStepper, t, step) = t >= ts.t_end - eps(t)
+function update_time(s::FerriteSolver{<:Any, <:AdaptiveTimeStepper}, t, step, converged)
+    ts=s.timestepper
+    
+    # Initialization
+    if step == 1 
+        if !converged
+            msg = "step=1 implies initial step and then \"convergence of the previous step\" must be true"
+            throw(ArgumentError(msg))
+        end
+        ts.Δt[] = min(t+ts.Δt_init, ts.t_end)-t
+        return t+ts.Δt[], step+1
+    end
+
+    if !converged
+        if ts.Δt[] ≈ ts.Δt_min
+            msg = "The nonlinear solve failed and the AdaptiveTimeStepper is at its minimum time step"
+            throw(ConvergenceError(msg))
+        end
+        t -= ts.Δt[]
+        ts.Δt[] = max(ts.Δt[]*ts.change_factor, ts.Δt_min)
+    else
+        numiter = getnumiter(s.nlsolver)
+        maxiter = getmaxiter(s.nlsolver)
+        optiter = Int(floor(ts.optiter_ratio*maxiter))
+        m = (numiter-optiter)/(maxiter-optiter)
+        ts.Δt[] = min(max(ts.Δt[] * (ts.change_factor^m), ts.Δt_min), ts.Δt_max)
+        step += 1
+    end
+
+    # Ensure that the last time step is not too short.
+    # With the following algorithm, the last two time steps
+    # are only guaranteed to be > Δt_min/2
+    t_remaining = ts.t_end - (t+ts.Δt[])
+    if t_remaining < eps(t)
+        ts.Δt[] = ts.t_end-t
+        t = ts.t_end
+    elseif t_remaining < ts.Δt_min
+        ts.Δt[] = (ts.t_end - t)/2
+        t += ts.Δt[]
+    else
+        t += ts.Δt[]
+    end
+
+    return t, step
+end

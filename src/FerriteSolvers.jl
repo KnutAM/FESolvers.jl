@@ -6,7 +6,7 @@ export FerriteSolver
 export NewtonSolver, SteepestDescent
 export NoLineSearch, ArmijoGoldstein
 export BackslashSolver
-export FixedTimeStepper
+export FixedTimeStepper, AdaptiveTimeStepper
 
 struct ConvergenceError <: Exception
     msg::String
@@ -24,6 +24,7 @@ struct FerriteSolver{NLS,TS}
 end
 FerriteSolver(;nlsolver, timestepper) = FerriteSolver(nlsolver, timestepper)
 
+include("utils.jl")
 include("userfunctions.jl")
 include("linearsolvers.jl")
 include("linesearchers.jl")
@@ -43,6 +44,7 @@ function solve_ferrite_problem!(solver::FerriteSolver, problem)
     t = initial_time(solver.timestepper)
     step = 1
     converged = true
+    xold = deepcopy(getunknowns(problem))
     while !islaststep(solver.timestepper, t, step)
         t, step = update_time(solver, t, step, converged)
         update_to_next_step!(problem, t)
@@ -53,6 +55,7 @@ function solve_ferrite_problem!(solver::FerriteSolver, problem)
             handle_converged!(problem)
             postprocess!(problem, step)
         else    # Should be an option if this should print or not...
+            setunknowns!(problem, xold)         # Reset unknowns if it didn't converge
             println("the nonlinear solver didn't converge")
         end
     end
