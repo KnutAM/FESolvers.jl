@@ -14,16 +14,23 @@ return `false` otherwise
 function islaststep end
 
 """
-    update_time(solver::FerriteSolver{<:Any, <:TST}, time, step, converged::Bool)
+    update_time(solver, time, step, converged::Bool)
+    update_time(timestepper, nlsolver, time, step, converged::Bool)
+
 Return the next time and step number, depending on if the previous time step converged 
 or not. If not converged, return the same `step` but a `new_time<time` to reduce the 
 time step. If it is not possible to retry with shorter timestep, throw 
 `ConvergenceError`. If converged, update time step as planned. 
 Note: The full solver is given as input to allow specialization on e.g. if a 
 Newton iteration has required many iterations, shorten the next time step as a 
-precausionary step
+precausionary step.
+
+Note that a call to the first definition is forwarded to the second function definition 
+by decomposing the solver, unless another specialization is defined.
 """
 function update_time end
+
+update_time(s::FESolver, args...; kwargs...) = update_time(gettimestepper(s), getnlsolver(s), args...; kwargs...)
 
 """
     FixedTimeStepper(num_steps::int, Δt, t_start=0)
@@ -43,12 +50,12 @@ end
 
 initial_time(ts::FixedTimeStepper) = first(ts.t)
 islaststep(ts::FixedTimeStepper, _, step) = step >= length(ts.t)
-function update_time(s::FerriteSolver{<:Any,<:FixedTimeStepper}, t, step, converged)
+function update_time(ts::FixedTimeStepper, nlsolver, t, step, converged)
     if !converged
         msg = "nonlinear solve failed and FixedTimeStepper cannot adjust time step"
         throw(ConvergenceError(msg))
     end
-    return s.timestepper.t[step+1], step+1
+    return ts.t[step+1], step+1
 end
 
 
@@ -114,9 +121,7 @@ end
 
 initial_time(ts::AdaptiveTimeStepper) = ts.t_start 
 islaststep(ts::AdaptiveTimeStepper, t, step) = t >= ts.t_end - eps(t)
-function update_time(s::FerriteSolver{<:Any, <:AdaptiveTimeStepper}, t, step, converged)
-    ts=s.timestepper
-    
+function update_time(ts::AdaptiveTimeStepper, nlsolver, t, step, converged)
     # Initialization
     if step == 1 
         if !converged
@@ -135,8 +140,8 @@ function update_time(s::FerriteSolver{<:Any, <:AdaptiveTimeStepper}, t, step, co
         t -= ts.Δt[]
         ts.Δt[] = max(ts.Δt[]*ts.change_factor, ts.Δt_min)
     else
-        numiter = getnumiter(s.nlsolver)
-        maxiter = getmaxiter(s.nlsolver)
+        numiter = getnumiter(nlsolver)
+        maxiter = getmaxiter(nlsolver)
         optiter = Int(floor(ts.optiter_ratio*maxiter))
         m = (numiter-optiter)/(maxiter-optiter)
         ts.Δt[] = min(max(ts.Δt[] * (ts.change_factor^m), ts.Δt_min), ts.Δt_max)
