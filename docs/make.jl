@@ -1,6 +1,14 @@
 using FESolvers
 using Documenter
 
+const is_ci = get(ENV, "CI", "false") == "true"
+
+include("generate.jl")
+examples = ["plasticity.jl",]
+GENERATEDEXAMPLES = [joinpath("examples", replace(f, ".jl"=>".md")) for f in examples]
+
+build_examples(examples)
+
 DocMeta.setdocmeta!(FESolvers, :DocTestSetup, :(using FESolvers); recursive=true)
 
 makedocs(;
@@ -15,11 +23,12 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
-        "Solvers" => "solvers.md",
-        "User problem" => "userfunctions.md",
-        "Nonlinear solvers" => "nlsolvers.md",
-        "Time steppers" => "timesteppers.md",
-        "Linear solvers" => "linearsolvers.md"
+        "Manual" => ["solvers.md",
+                     "userfunctions.md",
+                     "nlsolvers.md",
+                     "timesteppers.md",
+                     "linearsolvers.md"],
+        "Examples" => GENERATEDEXAMPLES,   
     ],
 )
 
