@@ -27,7 +27,7 @@ git-tree-sha1 = "2498c3704e9cd26bf586a351473417881676bb2d"
 uuid = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 version = "0.27.21"
 
-[[deps.FerriteSolvers]]
+[[deps.FESolvers]]
 path = ".."
 uuid = "79314e9b-2e6f-4d6d-a72d-515aa2604984"
 version = "0.1.0"

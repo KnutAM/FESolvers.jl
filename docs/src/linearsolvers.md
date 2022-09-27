@@ -2,7 +2,7 @@
 A linear solver should support the `solve_linear!` function specified below. 
 
 ```@docs
-FerriteSolvers.solve_linear!
+FESolvers.solve_linear!
 ```
 
 ## Implemented Solvers

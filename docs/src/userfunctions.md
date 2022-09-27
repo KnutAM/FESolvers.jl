@@ -1,5 +1,5 @@
 # User problem
-The key to using the `FerriteSolvers.jl` package is to define your 
+The key to using the `FESolvers.jl` package is to define your 
 `problem`. This `problem` should support a set of functions
 in order for the solver to solve your `problem`. 
 While some functions are always required, some are only required by certain solvers. 
@@ -9,25 +9,25 @@ requires you to dispatch on the type of solver.
 
 ## Applicable to all solvers
 ```@docs
-FerriteSolvers.getunknowns
-FerriteSolvers.getresidual
-FerriteSolvers.update_to_next_step!
-FerriteSolvers.update_problem!
-FerriteSolvers.handle_converged!
-FerriteSolvers.postprocess!
+FESolvers.getunknowns
+FESolvers.getresidual
+FESolvers.update_to_next_step!
+FESolvers.update_problem!
+FESolvers.handle_converged!
+FESolvers.postprocess!
 ```
 
 
 ## Simple API
 ```@docs
-FerriteSolvers.calculate_convergence_measure
-FerriteSolvers.getjacobian
-FerriteSolvers.getdescentpreconditioner
+FESolvers.calculate_convergence_measure
+FESolvers.getjacobian
+FESolvers.getdescentpreconditioner
 ```
 
 ## Advanced API
 ```@docs
-FerriteSolvers.getsystemmatrix
-FerriteSolvers.check_convergence_criteria
+FESolvers.getsystemmatrix
+FESolvers.check_convergence_criteria
 ```
 

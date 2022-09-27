@@ -4,11 +4,11 @@ Base.@kwdef struct TestNLSolver{LineSearch,T}
     maxiter::Int
     tolerance::T
 end
-FerriteSolvers.getmaxiter(s::TestNLSolver) = s.maxiter
-FerriteSolvers.gettolerance(s::TestNLSolver) = s.tolerance
+FESolvers.getmaxiter(s::TestNLSolver) = s.maxiter
+FESolvers.gettolerance(s::TestNLSolver) = s.tolerance
 
-function FerriteSolvers.calculate_update(problem, nlsolver::TestNLSolver, iter)
-    Δa = -FerriteSolvers.getjacobian(problem)\FerriteSolvers.getresidual(problem)
-    iter == 1 && FerriteSolvers.linesearch!(Δa, problem, nlsolver.ls)
+function FESolvers.calculate_update(problem, nlsolver::TestNLSolver, iter)
+    Δa = -FESolvers.getjacobian(problem)\FESolvers.getresidual(problem)
+    iter == 1 && FESolvers.linesearch!(Δa, problem, nlsolver.ls)
     return Δa
 end

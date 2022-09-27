@@ -5,7 +5,7 @@ using SparseArrays, LinearAlgebra
             @testset "$(typeof(K)), $(typeof(linsolver))" begin
                 r =  rand(size(K,1))
                 Δx = similar(r)
-                FerriteSolvers.solve_linear!(Δx, K, r, linsolver)
+                FESolvers.solve_linear!(Δx, K, r, linsolver)
                 @test K*Δx ≈ -r 
             end
         end

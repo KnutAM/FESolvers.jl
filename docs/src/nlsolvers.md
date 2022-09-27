@@ -2,19 +2,19 @@
 A nonlinear solver should support the `solve_nonlinear!` function specified below. 
 
 ```@docs
-FerriteSolvers.solve_nonlinear!
+FESolvers.solve_nonlinear!
 ```
 
 It can do so, by supporting the following functions
 ```@docs
-FerriteSolvers.calculate_update
-FerriteSolvers.getmaxiter
-FerriteSolvers.gettolerance
+FESolvers.calculate_update
+FESolvers.getmaxiter
+FESolvers.gettolerance
 ```
 and optionally
 ```@docs
-FerriteSolvers.update_state!
-FerriteSolvers.reset_state!
+FESolvers.update_state!
+FESolvers.reset_state!
 ```
 
 ## Implemented Solvers

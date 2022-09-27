@@ -1,3 +1,3 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-FerriteSolvers = "79314e9b-2e6f-4d6d-a72d-515aa2604984"
+FESolvers = "79314e9b-2e6f-4d6d-a72d-515aa2604984"
