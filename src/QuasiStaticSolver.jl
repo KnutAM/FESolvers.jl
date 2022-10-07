@@ -35,7 +35,7 @@ function solve_problem!(solver::QuasiStaticSolver, problem)
         if converged
             copy!(xold, getunknowns(problem))
             handle_converged!(problem)
-            postprocess!(problem, step)
+            postprocess!(problem, step, solver)
         else
             # Reset unknowns if it didn't converge to 
             setunknowns!(problem, xold)

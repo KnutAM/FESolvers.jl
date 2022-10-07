@@ -116,11 +116,13 @@ function handle_converged! end
 
 """
     postprocess!(problem, step)
+    postprocess!(problem, step, solver)
 
 Perform any postprocessing at the current time and step nr `step`
 Called after time step converged, and after `handle_converged!`
 """
 function postprocess! end
+postprocess!(problem, step, solver) = postprocess!(problem, step)
 
 
 """
