@@ -121,3 +121,15 @@ Perform any postprocessing at the current time and step nr `step`
 Called after time step converged, and after `handle_converged!`
 """
 function postprocess! end
+
+
+"""
+    setunknowns!(problem, x)
+
+Copy the given values `x` into the unknown values of `problem`. 
+Defaults to `copy!(getunknowns(problem), x)`, which works as long as
+`getunknowns` returns the `Vector{<:Number}` stored in the problem struct. 
+If, e.g. the unknowns is a custom type or a nested vector, this function should 
+be overloaded. 
+"""
+setunknowns!(problem, x::Vector{<:Number}) = copy!(getunknowns(problem), x) 
