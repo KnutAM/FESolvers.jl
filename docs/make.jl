@@ -1,29 +1,39 @@
-using FerriteSolvers
+using FESolvers
 using Documenter
 
-DocMeta.setdocmeta!(FerriteSolvers, :DocTestSetup, :(using FerriteSolvers); recursive=true)
+const is_ci = get(ENV, "CI", "false") == "true"
+
+include("generate.jl")
+examples = ["plasticity.jl",]
+GENERATEDEXAMPLES = [joinpath("examples", replace(f, ".jl"=>".md")) for f in examples]
+
+build_examples(examples)
+
+DocMeta.setdocmeta!(FESolvers, :DocTestSetup, :(using FESolvers); recursive=true)
 
 makedocs(;
-    modules=[FerriteSolvers],
+    modules=[FESolvers],
     authors="Knut Andreas Meyer and contributors",
-    repo="https://github.com/KnutAM/FerriteSolvers.jl/blob/{commit}{path}#{line}",
-    sitename="FerriteSolvers.jl",
+    repo="https://github.com/KnutAM/FESolvers.jl/blob/{commit}{path}#{line}",
+    sitename="FESolvers.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://KnutAM.github.io/FerriteSolvers.jl",
+        canonical="https://KnutAM.github.io/FESolvers.jl",
         assets=String[],
     ),
     pages=[
         "Home" => "index.md",
-        "User problem" => "userfunctions.md",
-        "Nonlinear solvers" => "nlsolvers.md",
-        "Time steppers" => "timesteppers.md",
-        "Linear solvers" => "linearsolvers.md"
+        "Manual" => ["solvers.md",
+                     "userfunctions.md",
+                     "nlsolvers.md",
+                     "timesteppers.md",
+                     "linearsolvers.md"],
+        "Examples" => GENERATEDEXAMPLES,   
     ],
 )
 
 deploydocs(;
-    repo="github.com/KnutAM/FerriteSolvers.jl",
+    repo="github.com/KnutAM/FESolvers.jl",
     devbranch="main",
     push_preview=true,
 )

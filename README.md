@@ -1,12 +1,12 @@
-# FerriteSolvers
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://KnutAM.github.io/FerriteSolvers.jl/dev)
-[![Build Status](https://github.com/KnutAM/FerriteSolvers.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/KnutAM/FerriteSolvers.jl/actions/workflows/CI.yml?query=branch%3Amain)
-[![Coverage](https://codecov.io/gh/KnutAM/FerriteSolvers.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/KnutAM/FerriteSolvers.jl)
+# FESolvers
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://KnutAM.github.io/FESolvers.jl/dev)
+[![Build Status](https://github.com/KnutAM/FESolvers.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/KnutAM/FESolvers.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![Coverage](https://codecov.io/gh/KnutAM/FESolvers.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/KnutAM/FESolvers.jl)
 
 Package to easily solve nonlinear problem, in particularily tailored to [Ferrite.jl](https://github.com/Ferrite-FEM/Ferrite.jl).
-By defining `solver = FerriteSolver(nlsolver, timestepper)`, the function 
+By defining `solver = QuasiStaticSolver(nlsolver, timestepper)`, the function 
 ```julia
-solve_ferrite_problem!(solver::FerriteSolver, problem)
+solve_problem!(solver::QuasiStaticSolver, problem)
 ```
 solves the user-defined `problem`. For this user defined type, 
 the following functions should be defined

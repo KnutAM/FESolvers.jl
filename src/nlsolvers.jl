@@ -1,67 +1,59 @@
-abstract type AbstractLineSearch end
-"Singleton that does not perform a linesearch when used in a nonlinear solver"
-struct NoLineSearch <: AbstractLineSearch end
-
-@doc raw"""
-    Armijo-Goldstein{T}(;β=0.9,μ=0.01,τ0=1.0,τmin=1e-4)
-Backtracking line search based on the Armijo-Goldstein condition
-
-```math
-\Pi(\boldsymbol{u} + \tau \Delta\boldsymbol{u}) \leq \Pi(\boldsymbol{u}) - \mu\tau\delta\Pi(\boldsymbol{u})[\Delta \boldsymbol{u}]
-```
-
-where \$\Pi\$ is the potential, \$\tau\$ the stepsize, and \$\delta\Pi\$ the residuum.
-
-#Fields
-- `β::T = 0.9` constant factor that changes the steplength τ in each iteration
-- `μ::T = 0.01` second constant factor that determines how much the potential needs to decrease additionally
-- `τ0::T = 1.0` start stepsize 
-- `τmin::T = 1e-4` minimal stepsize
 """
-Base.@kwdef struct ArmijoGoldstein{T} <: AbstractLineSearch
-    β::T = 0.9
-    μ::T = 0.10
-    τ0::T = 1.0
-    τmin::T = 1e-5
-end
+    solve_nonlinear!(nlsolver, problem)
 
-linesearch!(problem,searchdirection,ls::NoLineSearch) = nothing
-
-function linesearch!(problem,searchdirection,ls::ArmijoGoldstein) 
-    τ = ls.τ0; μ = ls.μ; β = ls.β
-    𝐮 = getunknowns(problem)
-    Π₀ = calculate_energy(problem,𝐮)
-    δΠ₀ = getresidual(problem)
-    Πₐ = calculate_energy(problem,𝐮 .+ τ .* searchdirection)
-    armijo = Πₐ - Π₀ - μ * τ * δΠ₀'searchdirection
-    
-    while armijo > 0 && !isapprox(armijo,0.0,atol=1e-8)
-        τ *= β
-        Πₐ = calculate_energy(problem,𝐮 .+ τ .* searchdirection)
-        armijo = Πₐ - Π₀ - μ * τ * δΠ₀'searchdirection
-    end
-    τ = max(ls.τmin,τ)
-    searchdirection .*= τ
-end
-
-"""
-    getlinesearch(nlsolver)
-Returns the used linesearch of the nonlinear solver.
-"""
-getlinesearch(nlsolver) = nlsolver.linesearch
-"""
-    getmaxiter(nlsolver)
-Returns the maximum number of iterations allowed for the nonlinear solver
-"""
-getmaxiter(nlsolver) = nlsolver.maxiter
-
-"""
-    solve_nonlinear!(solver::FerriteSolver{<:NLS}, problem)
-
-Solve one step in the nonlinear `problem`, given as `r(x) = 0`,
-by using the solver of type `NLS`. 
+Solve the current time step in the nonlinear `problem`, (`r(x) = 0`),
+by using the nonlinear solver: `nlsolver`. 
 """
 function solve_nonlinear! end
+
+"""
+    function calculate_update(problem, nlsolver, iter)
+
+According to the nonlinear solver, `nlsolver`, at iteration `iter`,
+calculate the update, `Δx` to the unknowns `x`.
+"""
+function calculate_update end
+
+"""
+    getmaxiter(nlsolver)
+
+Returns the maximum number of iterations allowed for the nonlinear solver
+"""
+function getmaxiter end
+
+"""
+    getnumiter(nlsolver)
+
+Returns the last number of iterations used by the nonlinear solver
+"""
+function getnumiter end
+
+"""
+    gettolerance(nlsolver)
+
+Returns the iteration tolerance for the solver
+"""
+function gettolerance end
+
+"""
+    update_state!(nlsolver, r)
+
+A nonlinear solver may solve information about its convergence state.
+`r` is the output from [`calculate_convergence_measure`](@ref) when 
+this function is called by the default implementation of 
+[`check_convergence_criteria`](@ref). 
+`update_state!` is optional to implement
+"""
+update_state!(::Any, _) = nothing
+
+"""
+    reset_state!(nlsolver)
+
+If [`update_state!`](@ref) is implemented, this function is used to 
+reset its state at the beginning of each new time step. 
+"""
+reset_state!(::Any) = nothing
+
 
 """
     NewtonSolver(;linsolver=BackslashSolver(), linesearch=NoLineSearch(), maxiter=10, tolerance=1.e-6)
@@ -77,27 +69,16 @@ struct NewtonSolver{LS,LSearch,T}
     linesearch::LSearch
     maxiter::Int 
     tolerance::T
-    numiter::Vector{Int}  # Last step number of iterations
+    numiter::ScalarWrapper{Int}  # Last step number of iterations
     residuals::Vector{T}  # Last step residual history
 end
 
 function NewtonSolver(;linsolver=BackslashSolver(), linesearch=NoLineSearch(), maxiter=10, tolerance=1.e-6)
     residuals = zeros(typeof(tolerance), maxiter+1)
-    return NewtonSolver(linsolver, linesearch, maxiter, tolerance, [zero(maxiter)], residuals)
+    return NewtonSolver(linsolver, linesearch, maxiter, tolerance, ScalarWrapper(0), residuals)
 end
+getsystemmatrix(problem,::NewtonSolver) = getjacobian(problem)
 
-function reset!(s::NewtonSolver)
-    fill!(s.numiter, 0)
-    fill!(s.residuals, 0)
-end
-
-function Base.show(s::NewtonSolver)
-    println("Newton solver has used $(s.numiter[1]) iterations")
-    println("residuals")
-    for i in 1:s.numiter[1]
-        println("r[$i] = $(s.residuals[i])")
-    end
-end
 
 @doc raw"""
     SteepestDescent(;maxiter=10, tolerance=1.e-6)
@@ -114,39 +95,51 @@ Base.@kwdef struct SteepestDescent{LineSearch,LinearSolver,T}
     linesearch::LineSearch = ArmijoGoldstein()
     maxiter::Int = 200
     tolerance::T = 1e-6
-    numiter::Vector{Int} = [zero(maxiter)]  # Last step number of iterations
+    numiter::ScalarWrapper{Int} = ScalarWrapper(0)  # Last step number of iterations
     residuals::Vector{T} = zeros(typeof(tolerance),maxiter+1)  # Last step residual history
 end
+getsystemmatrix(problem,::SteepestDescent) = getdescentpreconditioner(problem)
 
-getsystemmatrix(problem,solver::SteepestDescent) = LinearAlgebra.I
 
-function reset!(s::SteepestDescent)
-    fill!(s.numiter, 0)
+"""
+    getlinesearch(nlsolver)
+Returns the used linesearch of the nonlinear solver.
+"""
+getlinesearch(nlsolver::Union{NewtonSolver,SteepestDescent}) = nlsolver.linesearch
+
+getmaxiter(nlsolver::Union{NewtonSolver,SteepestDescent}) = nlsolver.maxiter
+gettolerance(nlsolver::Union{NewtonSolver,SteepestDescent}) = nlsolver.tolerance
+getnumiter(s::Union{NewtonSolver,SteepestDescent}) = s.numiter[]
+
+
+function reset_state!(s::Union{NewtonSolver,SteepestDescent})
+    s.numiter[] = 0
     fill!(s.residuals, 0)
 end
 
-function Base.show(s::SteepestDescent)
-    println("Steepest Descent")
+function update_state!(s::Union{NewtonSolver,SteepestDescent}, r)
+    s.numiter[] += 1
+    s.residuals[s.numiter[]] = r 
 end
 
-function solve_nonlinear!(solver::FerriteSolver{T}, problem) where T<:Union{SteepestDescent,NewtonSolver}
-    nlsolver = solver.nlsolver
+function solve_nonlinear!(nlsolver, problem)
     maxiter = getmaxiter(nlsolver)
-    tol = nlsolver.tolerance
-    ls = getlinesearch(nlsolver)
-    Δa = zero(getunknowns(problem))
-    reset!(nlsolver)
-    for i in 1:(maxiter+1)
-        nlsolver.numiter .= i
-        nlsolver.residuals[i] = calculate_convergence_criterion(problem)
-        if nlsolver.residuals[i] < tol
-            return true
-        end
-        i>maxiter && return false # Did not converge
-        r = getresidual(problem)
-        K = getsystemmatrix(problem,nlsolver)
-        update_guess!(Δa, K, r, nlsolver.linsolver)
-        linesearch!(problem,Δa,ls) 
+    reset_state!(nlsolver)
+    update_problem!(problem)
+    for iter in 1:maxiter
+        check_convergence_criteria(problem, nlsolver) && return true
+        Δa = calculate_update(problem, nlsolver, iter)
         update_problem!(problem, Δa)
     end
+    check_convergence_criteria(problem, nlsolver) && return true
+    return false
+end
+
+function calculate_update(problem, nlsolver::Union{SteepestDescent,NewtonSolver}, iter)
+    Δa = similar(getunknowns(problem))  # TODO: Should have a solvercache for these
+    r = getresidual(problem)
+    K = getsystemmatrix(problem,nlsolver)
+    solve_linear!(Δa, K, r, nlsolver.linsolver)
+    linesearch!(Δa, problem, getlinesearch(nlsolver)) # Scale Δa
+    return Δa
 end

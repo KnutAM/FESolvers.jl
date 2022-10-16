@@ -1,12 +1,12 @@
 ```@meta
-CurrentModule = FerriteSolvers
+CurrentModule = FESolvers
 ```
 
-# FerriteSolvers
-Documentation for [FerriteSolvers.jl](https://github.com/KnutAM/FerriteSolvers.jl).
+# FESolvers
+Documentation for [FESolvers.jl](https://github.com/KnutAM/FESolvers.jl).
 
 
 ```@docs
-solve_ferrite_problem!
-FerriteSolver
+solve_problem!
+QuasiStaticSolver
 ```

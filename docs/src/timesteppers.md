@@ -2,9 +2,9 @@
 A time stepper should support the following functions
 
 ```@docs
-FerriteSolvers.initial_time
-FerriteSolvers.islaststep
-FerriteSolvers.update_time
+FESolvers.initial_time
+FESolvers.islaststep
+FESolvers.update_time
 ```
 
 ## Implemented steppers
