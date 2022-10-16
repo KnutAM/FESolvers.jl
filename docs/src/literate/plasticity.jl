@@ -207,7 +207,7 @@ function example_solution()
     ## Adaptive time stepping 
     problem = build_problem(def)
     ts = AdaptiveTimeStepper(0.05, 1.0; Δt_min=0.01, Δt_max=0.2)
-    solver = QuasiStaticSolver(NewtonSolver(;tolerance=1.0, maxiter=4), ts)
+    solver = QuasiStaticSolver(NewtonSolver(;tolerance=1.0, maxiter=6), ts)
     solve_problem!(solver, problem)
     println(problem.buf.time)
     plot_results(problem, plt=plt, label="adaptive", markershape=:circle)
