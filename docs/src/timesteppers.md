@@ -9,7 +9,7 @@ FESolvers.update_time
 
 ## Implemented steppers
 
-### FixedTimeStepper
 ```@docs
 FixedTimeStepper
+AdaptiveTimeStepper
 ```
