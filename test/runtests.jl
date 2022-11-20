@@ -17,7 +17,8 @@ include("test_timesteppers.jl")
     problem = TestProblem()
     timehist = [0.0, 1.0, 2.0, 3.0]
     solver = QuasiStaticSolver(nlsolver=NewtonSolver(;tolerance=tol), timestepper=FixedTimeStepper(timehist))
-    solve_problem!(solver, problem)
+    solve_problem!(solver, problem)    
+    
     @test problem.tv ≈ timehist[2:end]  # First time not postprocessed currently, should it?
     @test length(problem.conv) == (length(timehist)-1)  # Check handle_converged calls
     @test all(norm.(problem.rv) .<= tol)                # Check that all steps converged

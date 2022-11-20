@@ -1,11 +1,12 @@
 using ForwardDiff, LinearAlgebra
 # Test problem
 #= 
-    | exp(t) - norm(x)  |           | -norm(x)      |
-r = | cos(t) + x[1]     | = f(t) +  | x[1]          |
-    | x[3]^2 - x[2]     |           | x[3]^2-x[2]   |
+    | exp(t) - norm(x+1) |           | -norm(x .+ 1) |
+r = | cos(t) + x[1]      | = f(t) +  | x[1]          |
+    | x[3]^2 - x[2]      |           | x[3]^2-x[2]   |
 =#
-residual(x, f) = f + [-norm(x); x[1]; x[3]^2-x[2]]
+safenorm(x) = sqrt(sum(y->y^2+eps(y),x))    # Avoid NaN in derivative at x=0
+residual(x, f) = f + [-safenorm(x .+ 1); x[1]; x[3]^2-x[2]]
 
 struct TestProblem{T,FT}
     x::Vector{T}
