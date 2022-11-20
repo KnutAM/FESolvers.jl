@@ -1,7 +1,8 @@
 using SparseArrays, LinearAlgebra
 @testset "linearsolvers" begin
+    using LinearSolve
     for K in (rand(10,10)+10I, sprand(10,10,0.2)+10I)
-        for linsolver in (BackslashSolver(), )
+        for linsolver in (BackslashSolver(), nothing, (isa(K,Matrix) ? SimpleLUFactorization() : KLUFactorization()))
             @testset "$(typeof(K)), $(typeof(linsolver))" begin
                 r =  rand(size(K,1))
                 Δx = similar(r)
