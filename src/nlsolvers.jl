@@ -7,12 +7,12 @@ by using the nonlinear solver: `nlsolver`.
 function solve_nonlinear! end
 
 """
-    function calculate_update(problem, nlsolver, iter)
+    function calculate_update!(Δx, problem, nlsolver, iter)
 
 According to the nonlinear solver, `nlsolver`, at iteration `iter`,
 calculate the update, `Δx` to the unknowns `x`.
 """
-function calculate_update end
+function calculate_update! end
 
 """
     getmaxiter(nlsolver)
@@ -126,17 +126,17 @@ function solve_nonlinear!(nlsolver, problem)
     maxiter = getmaxiter(nlsolver)
     reset_state!(nlsolver)
     update_problem!(problem)
+    Δa = zero(getunknowns(problem))
     for iter in 1:maxiter
-        check_convergence_criteria(problem, nlsolver) && return true
-        Δa = calculate_update(problem, nlsolver, iter)
+        check_convergence_criteria(problem, nlsolver, Δa, iter) && return true
+        calculate_update!(Δa, problem, nlsolver, iter)
         update_problem!(problem, Δa)
     end
-    check_convergence_criteria(problem, nlsolver) && return true
+    check_convergence_criteria(problem, nlsolver, Δa, maxiter+1) && return true
     return false
 end
 
-function calculate_update(problem, nlsolver::Union{SteepestDescent,NewtonSolver}, iter)
-    Δa = similar(getunknowns(problem))  # TODO: Should have a solvercache for these
+function calculate_update!(Δa, problem, nlsolver::Union{SteepestDescent,NewtonSolver}, iter)
     r = getresidual(problem)
     K = getsystemmatrix(problem,nlsolver)
     solve_linear!(Δa, K, r, nlsolver.linsolver)

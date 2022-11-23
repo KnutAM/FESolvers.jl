@@ -43,7 +43,7 @@ function FESolvers.update_problem!(p::TestProblem, Δx=nothing)
     p.drdx .= ForwardDiff.jacobian(x_->residual(x_, p.f), p.x)
 end
 
-FESolvers.calculate_convergence_measure(p::TestProblem) = norm(p.r)
+FESolvers.calculate_convergence_measure(p::TestProblem, args...) = norm(p.r)
 FESolvers.handle_converged!(p::TestProblem) = push!(p.conv, true)
 function FESolvers.postprocess!(p::TestProblem, step)
     push!(p.xv, copy(p.x))
@@ -74,5 +74,5 @@ function FESolvers.update_problem!(p::Rosenbrock, Δx=nothing)
     p.r .= dfdx
     p.drdx .= d²fdxdx
 end
-FESolvers.calculate_convergence_measure(p::Rosenbrock) = norm(p.r)
+FESolvers.calculate_convergence_measure(p::Rosenbrock, args...) = norm(p.r)
 

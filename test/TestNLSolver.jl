@@ -7,8 +7,8 @@ end
 FESolvers.getmaxiter(s::TestNLSolver) = s.maxiter
 FESolvers.gettolerance(s::TestNLSolver) = s.tolerance
 
-function FESolvers.calculate_update(problem, nlsolver::TestNLSolver, iter)
-    Δa = -FESolvers.getjacobian(problem)\FESolvers.getresidual(problem)
+function FESolvers.calculate_update!(Δa, problem, nlsolver::TestNLSolver, iter)
+    Δa .= -FESolvers.getjacobian(problem)\FESolvers.getresidual(problem)
     iter == 1 && FESolvers.linesearch!(Δa, problem, nlsolver.ls)
     return Δa
 end
