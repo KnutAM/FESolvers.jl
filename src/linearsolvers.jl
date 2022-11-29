@@ -13,5 +13,4 @@ The standard julia linear solver using `Δx .= -K\\r`
 """
 struct BackslashSolver end
 
-solve_linear!(Δx, K, r, ::BackslashSolver) = (Δx .= -K\r)
-
+solve_linear!(Δx, K, r, ::BackslashSolver) = map!(-, Δx, K\r)
