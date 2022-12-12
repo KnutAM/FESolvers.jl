@@ -26,9 +26,23 @@ include("test_timesteppers.jl")
     @test all(isapprox.(residual.(problem.xv, problem.fun.(problem.tv)), problem.rv))
 
     problem = TestProblem(;throw_at_step=3)
-    FESolvers.close_problem(p) = push!(p.steps, -1)
+    FESolvers.close_problem(p::TestProblem) = push!(p.steps, -1)
     @test_throws TestError solve_problem!(solver, problem)
     @test length(problem.steps) == 2
     @test last(problem.steps) == -1
-end
 
+    # Test the fully linear case 
+    k = 1.0
+    p_linear = LinearTestProblem(k;dbcfun=t->0.1*t)
+    s_linear = QuasiStaticSolver(nlsolver=LinearProblemSolver(), timestepper=FixedTimeStepper(timehist))
+    solve_problem!(s_linear, p_linear)
+    
+    ubc = 0.1*timehist   # Boundary condition 
+    # Two springs in series, stiffness is k/2. Displacement Δu = 2f/k
+    fend = copy(timehist)
+    uend = ubc + 2*fend/k 
+    @test p_linear.u[1] ≈ last(ubc)
+    @test last(p_linear.u) ≈ last(p_linear.uend)
+    @test p_linear.uend ≈ uend[2:end]
+    @test length(p_linear.conv) == length(timehist)-1
+end

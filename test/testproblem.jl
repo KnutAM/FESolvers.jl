@@ -56,6 +56,46 @@ function FESolvers.postprocess!(p::TestProblem, step)
     push!(p.steps, step)
 end
 
+struct LinearTestProblem{T,FF<:Function,DF<:Function}
+    K0::Matrix{T}
+    K::Matrix{T}
+    u::Vector{T}
+    r::Vector{T}
+    forcefun::FF        # Time varying force
+    dbcfun::DF          # Time varying boundary condition
+    dbval::Vector{T}    # Save time varying boundary condition
+    # Some postprocessing to check results 
+    uend::Vector{T}
+    conv::Vector{Bool}
+end
+function LinearTestProblem(K0::Matrix{T}, forcefun, dbcfun) where T
+    LinearTestProblem(K0, copy(K0), zeros(T,size(K0,1)), zeros(T, size(K0,1)), forcefun, dbcfun, [zero(T),], T[], Bool[])
+end
+function LinearTestProblem(k; forcefun=identity, dbcfun=identity)
+    K0 = [k -k 0.0; -k 2k -k; 0.0 -k k]    # Two springs
+    return LinearTestProblem(K0, forcefun, dbcfun)
+end
+FESolvers.getunknowns(p::LinearTestProblem) = p.u 
+FESolvers.getresidual(p::LinearTestProblem) = p.r
+FESolvers.getjacobian(p::LinearTestProblem) = p.K 
+function FESolvers.update_to_next_step!(p::LinearTestProblem, time)
+    fill!(p.r, 0); 
+    p.r[end]=-p.forcefun(time)
+    p.dbval[1] = p.dbcfun(time)
+end
+function FESolvers.update_problem!(p::LinearTestProblem, Δu=nothing)
+    isnothing(Δu) || (p.u .+= Δu)
+    p.K .= p.K0
+    p.u[1] = p.dbval[1]
+    p.r .+= p.K*p.u
+    # "apply_zero!"
+    p.K[:,1] .= 0; p.K[1,:] .= 0; p.K[1,1] = p.K0[1,1]
+    p.r[1] = 0
+end
+
+FESolvers.handle_converged!(p::LinearTestProblem) = push!(p.conv, true)
+FESolvers.postprocess!(p::LinearTestProblem, step) = push!(p.uend, last(p.u))
+
 
 # Test case for nonlinear solvers
 struct Rosenbrock{T}
@@ -79,4 +119,3 @@ function FESolvers.update_problem!(p::Rosenbrock, Δx=nothing)
     p.drdx .= d²fdxdx
 end
 FESolvers.calculate_convergence_measure(p::Rosenbrock, args...) = norm(p.r)
-

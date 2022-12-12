@@ -77,7 +77,7 @@ function NewtonSolver(;linsolver=BackslashSolver(), linesearch=NoLineSearch(), m
     residuals = zeros(typeof(tolerance), maxiter+1)
     return NewtonSolver(linsolver, linesearch, maxiter, tolerance, ScalarWrapper(0), residuals)
 end
-getsystemmatrix(problem,::NewtonSolver) = getjacobian(problem)
+getsystemmatrix(problem, ::NewtonSolver) = getjacobian(problem)
 
 
 @doc raw"""
@@ -98,7 +98,7 @@ Base.@kwdef struct SteepestDescent{LineSearch,LinearSolver,T}
     numiter::ScalarWrapper{Int} = ScalarWrapper(0)  # Last step number of iterations
     residuals::Vector{T} = zeros(typeof(tolerance),maxiter+1)  # Last step residual history
 end
-getsystemmatrix(problem,::SteepestDescent) = getdescentpreconditioner(problem)
+getsystemmatrix(problem, ::SteepestDescent) = getdescentpreconditioner(problem)
 
 
 """
@@ -142,4 +142,41 @@ function calculate_update!(Δa, problem, nlsolver::Union{SteepestDescent,NewtonS
     solve_linear!(Δa, K, r, nlsolver.linsolver)
     linesearch!(Δa, problem, getlinesearch(nlsolver)) # Scale Δa
     return Δa
+end
+
+"""
+    LinearProblemSolver(;linsolver=BackslashSolver())
+
+This solver is specialized for linear problems of the form
+```math
+\\boldsymbol{r}(\\boldsymbol{x}(t),t)=\\boldsymbol{K}(t) \\boldsymbol{x}(t) - \\boldsymbol{f}(t)
+```
+where ``\\boldsymbol{K}=\\partial \\boldsymbol{r}/\\partial \\boldsymbol{x}``. 
+It expects that ``\\boldsymbol{x}(t)`` and ``\\boldsymbol{r}(t)`` have been updated to 
+``\\boldsymbol{x}_\\mathrm{bc}`` and ``\\boldsymbol{r}_\\mathrm{bc}=\\boldsymbol{K}(t)\\boldsymbol{x}_\\mathrm{bc}-\\boldsymbol{f}(t)``,
+such that 
+```math
+\\boldsymbol{x}(t) = \\boldsymbol{K}^{-1}(t)\\boldsymbol{r}_\\mathrm{bc} -\\boldsymbol{x}_\\mathrm{bc}
+= \\boldsymbol{K}^{-1}(t)\\left[\\boldsymbol{K}(t)\\boldsymbol{x}_\\mathrm{bc}-\\boldsymbol{f}(t)\\right] -\\boldsymbol{x}_\\mathrm{bc}
+= -\\boldsymbol{K}^{-1}(t)\\boldsymbol{f}(t)
+```
+is the solution to the current time step. This normally implies when using Ferrite the same procedure as for nonlinear problems, i.e. 
+that the boundary conditions are applied in `update_to_next_step!` and `update_problem!`, as well as the calculation of the residual 
+according to above and that `apply_zero!(K,r,ch)` is called (on both the residual and the stiffness matrix).
+"""
+struct LinearProblemSolver{LinearSolver}
+    linsolver::LinearSolver
+end
+LinearProblemSolver(;linsolver=BackslashSolver()) = LinearProblemSolver(linsolver)
+
+getsystemmatrix(problem, ::LinearProblemSolver) = getjacobian(problem)
+
+function solve_nonlinear!(nlsolver::LinearProblemSolver, problem)
+    update_problem!(problem)
+    r = getresidual(problem)
+    K = getsystemmatrix(problem,nlsolver)
+    Δa = similar(getunknowns(problem))
+    solve_linear!(Δa, K, r, nlsolver.linsolver)
+    update_problem!(problem, Δa)
+    return true # Assume always converged
 end
