@@ -80,12 +80,13 @@ function update_problem! end
 
 
 """
-    calculate_convergence_measure(problem) -> AbstractFloat
+    calculate_convergence_measure(problem, Δa, iter) -> AbstractFloat
 
 Calculate a value to be compared with the tolerance of the nonlinear solver. 
 A standard case when using [Ferrite.jl](https://github.com/Ferrite-FEM/Ferrite.jl)
-is `norm(getresidual(problem)[Ferrite.free_dofs(dbcs)])` 
-where `dbcs::Ferrite.ConstraintHandler`.
+is `norm(getresidual(problem)[Ferrite.free_dofs(ch)])` 
+where `ch::Ferrite.ConstraintHandler`. `Δa` is the update of the unknowns from 
+the previous iteration. Note that `iter=1` implies `Δa=0`
 
 The advanced API alternative is [`check_convergence_criteria`](@ref)
 
@@ -93,14 +94,14 @@ The advanced API alternative is [`check_convergence_criteria`](@ref)
 function calculate_convergence_measure end
 
 """
-    check_convergence_criteria(problem, nlsolver) -> Bool
+    check_convergence_criteria(problem, nlsolver, Δa, iter) -> Bool
 
 Check if `problem` has converged and update the state 
 of `nlsolver` wrt. number of iterations and a convergence
 measure if applicable.
 """
-function check_convergence_criteria(problem, nlsolver)
-    r = calculate_convergence_measure(problem)
+function check_convergence_criteria(problem, nlsolver, Δa, iter)
+    r = calculate_convergence_measure(problem, Δa, iter)
     update_state!(nlsolver, r)
     return r < gettolerance(nlsolver)
 end

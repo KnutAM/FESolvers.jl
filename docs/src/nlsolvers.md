@@ -7,7 +7,7 @@ FESolvers.solve_nonlinear!
 
 It can do so, by supporting the following functions
 ```@docs
-FESolvers.calculate_update
+FESolvers.calculate_update!
 FESolvers.getmaxiter
 FESolvers.gettolerance
 ```

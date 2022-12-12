@@ -161,7 +161,7 @@ end;
 
 # In this example, we use the standard convergence criterion that the norm of the free 
 # degrees of freedom is less than the iteration tolerance. 
-FESolvers.calculate_convergence_measure(p::PlasticityProblem) = norm(FESolvers.getresidual(p)[free_dofs(p.def.dbcs)]);
+FESolvers.calculate_convergence_measure(p::PlasticityProblem, args...) = norm(FESolvers.getresidual(p)[free_dofs(p.def.dbcs)]);
 
 # After convergence, we need to update the state variables. 
 function FESolvers.handle_converged!(p::PlasticityProblem)
