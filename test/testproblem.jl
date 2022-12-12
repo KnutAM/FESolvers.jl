@@ -8,6 +8,8 @@ r = | cos(t) + x[1]      | = f(t) +  | x[1]          |
 safenorm(x) = sqrt(sum(y->y^2+eps(y),x))    # Avoid NaN in derivative at x=0
 residual(x, f) = f + [-safenorm(x .+ 1); x[1]; x[3]^2-x[2]]
 
+struct TestError <: Exception end
+
 struct TestProblem{T,FT}
     x::Vector{T}
     r::Vector{T}
@@ -21,12 +23,13 @@ struct TestProblem{T,FT}
     tv::Vector{T}
     steps::Vector{Int}
     conv::Vector{Bool}
+    throw_at_step::Int # Test if problems throws in postprocess
 end
-TestProblem() = TestProblem(
+TestProblem(;throw_at_step=-1) = TestProblem(
     zeros(3), zeros(3), zeros(3,3), # x, r, drdx
     t->[exp(t); cos(t); zero(t)],   # fun
     zeros(3), zeros(1),             # f, time
-    Vector{Float64}[], Vector{Float64}[], Float64[], Int[], Bool[]
+    Vector{Float64}[], Vector{Float64}[], Float64[], Int[], Bool[], throw_at_step
     )
 
 FESolvers.getunknowns(p::TestProblem) = p.x
@@ -46,6 +49,7 @@ end
 FESolvers.calculate_convergence_measure(p::TestProblem, args...) = norm(p.r)
 FESolvers.handle_converged!(p::TestProblem) = push!(p.conv, true)
 function FESolvers.postprocess!(p::TestProblem, step)
+    step == p.throw_at_step && throw(TestError())
     push!(p.xv, copy(p.x))
     push!(p.rv, copy(p.r))
     push!(p.tv, p.time[1])

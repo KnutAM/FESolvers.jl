@@ -23,7 +23,7 @@ stepping throught the time `t`, using the `solver`.
 For details on the functions that should be defined for `problem`,
 see [User problem](@ref)
 """
-function safesolve(solver, problem)
+function solve_problem!(solver, problem)
     try
         _solve_problem!(solver, problem)
     finally

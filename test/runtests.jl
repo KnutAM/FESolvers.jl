@@ -25,5 +25,10 @@ include("test_timesteppers.jl")
     # Check that saved solutions are indeed the same solutions
     @test all(isapprox.(residual.(problem.xv, problem.fun.(problem.tv)), problem.rv))
 
+    problem = TestProblem(;throw_at_step=3)
+    FESolvers.close_problem(p) = push!(p.steps, -1)
+    @test_throws TestError solve_problem!(solver, problem)
+    @test length(problem.steps) == 2
+    @test last(problem.steps) == -1
 end
 

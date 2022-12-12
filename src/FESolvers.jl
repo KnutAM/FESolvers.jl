@@ -16,7 +16,7 @@ end
 abstract type FESolver end
 
 include("utils.jl")
-include("userfunctions.jl")
+include("problem.jl")
 include("linearsolvers.jl")
 include("linesearchers.jl")
 include("nlsolvers.jl")
