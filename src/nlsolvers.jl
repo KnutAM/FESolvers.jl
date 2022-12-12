@@ -147,6 +147,12 @@ end
 """
     LinearProblemSolver(;linsolver=BackslashSolver())
 
+This is a special type of "Nonlinear solver", which actually only solves linear problems, 
+but allows all other features (i.e. time stepping and postprocessing) of the `FESolvers` 
+package to be used. In particular, it allows you to maintain all other parts of your problem 
+exactly the same as for a nonlinear problem, but it is possible to get better performance as 
+it is, in principle, not necessary to assemble twice in each time step. 
+
 This solver is specialized for linear problems of the form
 ```math
 \\boldsymbol{r}(\\boldsymbol{x}(t),t)=\\boldsymbol{K}(t) \\boldsymbol{x}(t) - \\boldsymbol{f}(t)

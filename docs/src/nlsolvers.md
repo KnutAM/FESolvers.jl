@@ -20,6 +20,7 @@ FESolvers.reset_state!
 ## Implemented Solvers
 
 ```@docs
+LinearProblemSolver
 NewtonSolver
 SteepestDescent
 ```
