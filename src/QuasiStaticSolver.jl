@@ -23,7 +23,15 @@ stepping throught the time `t`, using the `solver`.
 For details on the functions that should be defined for `problem`,
 see [User problem](@ref)
 """
-function solve_problem!(solver::QuasiStaticSolver, problem)
+function safesolve(solver, problem)
+    try
+        _solve_problem!(solver, problem)
+    finally
+        close_problem(problem)
+    end
+end
+
+function _solve_problem!(solver::QuasiStaticSolver, problem)
     t = initial_time(solver.timestepper)
     step = 1
     converged = true

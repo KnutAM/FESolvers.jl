@@ -116,14 +116,17 @@ Only called directly after the problem has converged.
 function handle_converged! end
 
 """
-    postprocess!(problem, step)
     postprocess!(problem, step, solver)
+    postprocess!(problem, step)
 
 Perform any postprocessing at the current time and step nr `step`
-Called after time step converged, and after `handle_converged!`
+Called after time step converged, and after `handle_converged!`.
+One can choose which version to overload, i.e. if the solver should be 
+given or not. 
 """
 function postprocess! end
 postprocess!(problem, step, solver) = postprocess!(problem, step)
+postprocess!(args...) = nothing
 
 
 """
@@ -136,3 +139,12 @@ If, e.g. the unknowns is a custom type or a nested vector, this function should
 be overloaded. 
 """
 setunknowns!(problem, x::Vector{<:Number}) = copy!(getunknowns(problem), x) 
+
+"""
+    close_problem(problem)
+
+This function is called after solving the problem, even if the solution 
+fails due to an error thrown, for example if the problem doesn't converge. 
+Use to close any file streams etc. that are open and should be closed
+"""
+close_problem(::Any) = nothing
