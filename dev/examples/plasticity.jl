@@ -121,7 +121,7 @@ function FESolvers.update_problem!(p::PlasticityProblem, Δu=nothing)
     apply_zero!(buf.K, buf.r, def.dbcs)
 end;
 
-FESolvers.calculate_convergence_measure(p::PlasticityProblem) = norm(FESolvers.getresidual(p)[free_dofs(p.def.dbcs)]);
+FESolvers.calculate_convergence_measure(p::PlasticityProblem, args...) = norm(FESolvers.getresidual(p)[free_dofs(p.def.dbcs)]);
 
 function FESolvers.handle_converged!(p::PlasticityProblem)
     p.buf.states_old .= p.buf.states
