@@ -42,8 +42,8 @@ function _solve_problem!(solver::QuasiStaticSolver, problem)
         converged = solve_nonlinear!(solver.nlsolver, problem)
         if converged
             copy!(xold, getunknowns(problem))
-            handle_converged!(problem)
             postprocess!(problem, step, solver)
+            handle_converged!(problem)
         else
             # Reset unknowns if it didn't converge to 
             setunknowns!(problem, xold)

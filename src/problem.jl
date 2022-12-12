@@ -116,20 +116,11 @@ function check_convergence_criteria(problem, nlsolver, Δa, iter)
 end
 
 """
-    handle_converged!(problem)
-
-Do necessary update operations once it is known that the 
-problem has converged. E.g., update old values to the current. 
-Only called directly after the problem has converged. 
-"""
-function handle_converged! end
-
-"""
     postprocess!(problem, step, solver)
     postprocess!(problem, step)
 
 Perform any postprocessing at the current time and step nr `step`
-Called after time step converged, and after `handle_converged!`.
+Called after time step converged, and before `handle_converged!`.
 One can choose which version to overload, i.e. if the solver should be 
 given or not. 
 """
@@ -137,6 +128,15 @@ function postprocess! end
 postprocess!(problem, step, solver) = postprocess!(problem, step)
 postprocess!(args...) = nothing
 
+"""
+    handle_converged!(problem)
+
+Do necessary update operations once it is known that the 
+problem has converged. E.g., update old values to the current. 
+Only called directly after the problem has converged, 
+after `postprocess!`
+"""
+function handle_converged! end
 
 """
     setunknowns!(problem, x)
