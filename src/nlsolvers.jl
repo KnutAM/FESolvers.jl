@@ -162,9 +162,9 @@ It expects that ``\\boldsymbol{x}(t)`` and ``\\boldsymbol{r}(t)`` have been upda
 ``\\boldsymbol{x}_\\mathrm{bc}`` and ``\\boldsymbol{r}_\\mathrm{bc}=\\boldsymbol{K}(t)\\boldsymbol{x}_\\mathrm{bc}-\\boldsymbol{f}(t)``,
 such that 
 ```math
-\\boldsymbol{x}(t) = \\boldsymbol{K}^{-1}(t)\\boldsymbol{r}_\\mathrm{bc} -\\boldsymbol{x}_\\mathrm{bc}
-= \\boldsymbol{K}^{-1}(t)\\left[\\boldsymbol{K}(t)\\boldsymbol{x}_\\mathrm{bc}-\\boldsymbol{f}(t)\\right] -\\boldsymbol{x}_\\mathrm{bc}
-= -\\boldsymbol{K}^{-1}(t)\\boldsymbol{f}(t)
+\\boldsymbol{x}(t) = \\boldsymbol{x}_\\mathrm{bc} - \\boldsymbol{K}^{-1}(t)\\boldsymbol{r}_\\mathrm{bc}
+= \\boldsymbol{x}_\\mathrm{bc} - \\boldsymbol{K}^{-1}(t)\\left[\\boldsymbol{K}(t)\\boldsymbol{x}_\\mathrm{bc}-\\boldsymbol{f}(t)\\right]
+= \\boldsymbol{K}^{-1}(t)\\boldsymbol{f}(t)
 ```
 is the solution to the current time step. This normally implies when using Ferrite the same procedure as for nonlinear problems, i.e. 
 that the boundary conditions are applied in `update_to_next_step!` and `update_problem!`, as well as the calculation of the residual 
