@@ -40,7 +40,7 @@ function FESolvers.update_to_next_step!(p::TestProblem, time)
     p.time[1] = time
 end
 
-function FESolvers.update_problem!(p::TestProblem, Δx=nothing)
+function FESolvers.update_problem!(p::TestProblem, Δx; kwargs...)
     isnothing(Δx) || (p.x .+= Δx)
     p.r .= residual(p.x, p.f)
     p.drdx .= ForwardDiff.jacobian(x_->residual(x_, p.f), p.x)
@@ -81,16 +81,16 @@ FESolvers.getjacobian(p::LinearTestProblem) = p.K
 function FESolvers.update_to_next_step!(p::LinearTestProblem, time)
     fill!(p.r, 0); 
     p.r[end]=-p.forcefun(time)
-    p.dbval[1] = p.dbcfun(time)
+    p.u[1] = p.dbcfun(time)
 end
-function FESolvers.update_problem!(p::LinearTestProblem, Δu=nothing)
+function FESolvers.update_problem!(p::LinearTestProblem, Δu; update_jacobian, update_residual)
     isnothing(Δu) || (p.u .+= Δu)
-    p.K .= p.K0
-    p.u[1] = p.dbval[1]
-    p.r .+= p.K*p.u
-    # "apply_zero!"
-    p.K[:,1] .= 0; p.K[1,:] .= 0; p.K[1,1] = p.K0[1,1]
-    p.r[1] = 0
+    update_residual && (p.r .+= p.K0*p.u; p.r[1]=0)
+    if update_jacobian
+        p.K .= p.K0
+        # "apply_zero!"
+        p.K[:,1] .= 0; p.K[1,:] .= 0; p.K[1,1] = p.K0[1,1]
+    end
 end
 
 FESolvers.handle_converged!(p::LinearTestProblem) = push!(p.conv, true)
@@ -111,7 +111,7 @@ FESolvers.getresidual(p::Rosenbrock) = p.r
 FESolvers.getsystemmatrix(p::Rosenbrock, ::NewtonSolver) = p.drdx
 FESolvers.getjacobian(p::Rosenbrock) = p.drdx # For TestNLSolver 
 FESolvers.calculate_energy(p::Rosenbrock,x) = 100*(x[2] - x[1]^2)^2 + (1-x[1])^2
-function FESolvers.update_problem!(p::Rosenbrock, Δx=nothing)
+function FESolvers.update_problem!(p::Rosenbrock, Δx; kwargs...)
     isnothing(Δx) || (p.x .+= Δx)
     dfdx = ForwardDiff.gradient(x_->FESolvers.calculate_energy(p,x_),p.x)
     d²fdxdx = ForwardDiff.hessian(x_->FESolvers.calculate_energy(p,x_),p.x)

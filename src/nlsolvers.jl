@@ -125,12 +125,12 @@ end
 function solve_nonlinear!(nlsolver, problem)
     maxiter = getmaxiter(nlsolver)
     reset_state!(nlsolver)
-    update_problem!(problem)
+    update_problem!(problem, nothing; update_residual=true, update_jacobian=true)
     Δa = zero(getunknowns(problem))
     for iter in 1:maxiter
         check_convergence_criteria(problem, nlsolver, Δa, iter) && return true
         calculate_update!(Δa, problem, nlsolver, iter)
-        update_problem!(problem, Δa)
+        update_problem!(problem, Δa; update_residual=true, update_jacobian=true)
     end
     check_convergence_criteria(problem, nlsolver, Δa, maxiter+1) && return true
     return false
@@ -178,11 +178,11 @@ LinearProblemSolver(;linsolver=BackslashSolver()) = LinearProblemSolver(linsolve
 getsystemmatrix(problem, ::LinearProblemSolver) = getjacobian(problem)
 
 function solve_nonlinear!(nlsolver::LinearProblemSolver, problem)
-    update_problem!(problem)
+    update_problem!(problem, nothing; update_residual=true, update_jacobian=true)
     r = getresidual(problem)
     K = getsystemmatrix(problem,nlsolver)
     Δa = similar(getunknowns(problem))
     solve_linear!(Δa, K, r, nlsolver.linsolver)
-    update_problem!(problem, Δa)
+    update_problem!(problem, Δa; update_residual=false, update_jacobian=false)
     return true # Assume always converged
 end

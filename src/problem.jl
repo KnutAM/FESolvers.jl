@@ -65,16 +65,25 @@ time than the previous time if the solution did not converge.
 function update_to_next_step! end
 
 """
-    update_problem!(problem)
-    update_problem!(problem, Δx)
+    update_problem!(problem, Δx; update_residual::Bool, update_jacobian::Bool)
 
-Assemble the residual and stiffness for `x+=Δx`. 
+Update the unknowns, `x += Δx`, if `!isnothing(Δx)`, and in any case
+* Assemble the residual if `update_residual=true`
+* Assemble the jacobian if `update_jacobian=true`
 
-- Some linear solvers may be inaccurate, and if modified stiffness is used 
+Note that one can also update the residual and jacobian if any of the kwargs 
+are false, the kwargs just states if an update is required. 
+A simple function overload that doesn't account for the kwargs is
+```julia
+FESolvers.update_problem!(problem, Δx; kwargs...)
+```
+
+- Some linear solvers may be inaccurate, and if a modified stiffness is used 
   to enforce constraints on `x`, it is good the force `Δx=0` on these
   components inside this function. 
-- `Δx` is not given in the first call after [`update_to_next_step!`](@ref)
-  in which case no change of `x` should be made. 
+- `Δx=nothing` in the first call after [`update_to_next_step!`](@ref)
+  in which case, typically, no change of `x` should be made. Dirichlet
+  boundary conditions are typically updated in `update_to_next_step!`.
 """
 function update_problem! end
 
