@@ -77,7 +77,7 @@ function NewtonSolver(;linsolver=BackslashSolver(), linesearch=NoLineSearch(), m
     residuals = zeros(typeof(tolerance), maxiter+1)
     return NewtonSolver(linsolver, linesearch, maxiter, tolerance, ScalarWrapper(0), residuals)
 end
-getsystemmatrix(problem,::NewtonSolver) = getjacobian(problem)
+getsystemmatrix(problem, ::NewtonSolver) = getjacobian(problem)
 
 
 @doc raw"""
@@ -98,7 +98,7 @@ Base.@kwdef struct SteepestDescent{LineSearch,LinearSolver,T}
     numiter::ScalarWrapper{Int} = ScalarWrapper(0)  # Last step number of iterations
     residuals::Vector{T} = zeros(typeof(tolerance),maxiter+1)  # Last step residual history
 end
-getsystemmatrix(problem,::SteepestDescent) = getdescentpreconditioner(problem)
+getsystemmatrix(problem, ::SteepestDescent) = getdescentpreconditioner(problem)
 
 
 """
@@ -125,12 +125,12 @@ end
 function solve_nonlinear!(nlsolver, problem)
     maxiter = getmaxiter(nlsolver)
     reset_state!(nlsolver)
-    update_problem!(problem)
+    update_problem!(problem, nothing; update_residual=true, update_jacobian=true)
     Δa = zero(getunknowns(problem))
     for iter in 1:maxiter
         check_convergence_criteria(problem, nlsolver, Δa, iter) && return true
         calculate_update!(Δa, problem, nlsolver, iter)
-        update_problem!(problem, Δa)
+        update_problem!(problem, Δa; update_residual=true, update_jacobian=true)
     end
     check_convergence_criteria(problem, nlsolver, Δa, maxiter+1) && return true
     return false
@@ -142,4 +142,47 @@ function calculate_update!(Δa, problem, nlsolver::Union{SteepestDescent,NewtonS
     solve_linear!(Δa, K, r, nlsolver.linsolver)
     linesearch!(Δa, problem, getlinesearch(nlsolver)) # Scale Δa
     return Δa
+end
+
+"""
+    LinearProblemSolver(;linsolver=BackslashSolver())
+
+This is a special type of "Nonlinear solver", which actually only solves linear problems, 
+but allows all other features (i.e. time stepping and postprocessing) of the `FESolvers` 
+package to be used. In particular, it allows you to maintain all other parts of your problem 
+exactly the same as for a nonlinear problem, but it is possible to get better performance as 
+it is, in principle, not necessary to assemble twice in each time step. 
+
+This solver is specialized for linear problems of the form
+```math
+\\boldsymbol{r}(\\boldsymbol{x}(t),t)=\\boldsymbol{K}(t) \\boldsymbol{x}(t) - \\boldsymbol{f}(t)
+```
+where ``\\boldsymbol{K}=\\partial \\boldsymbol{r}/\\partial \\boldsymbol{x}``. 
+It expects that ``\\boldsymbol{x}(t)`` and ``\\boldsymbol{r}(t)`` have been updated to 
+``\\boldsymbol{x}_\\mathrm{bc}`` and ``\\boldsymbol{r}_\\mathrm{bc}=\\boldsymbol{K}(t)\\boldsymbol{x}_\\mathrm{bc}-\\boldsymbol{f}(t)``,
+such that 
+```math
+\\boldsymbol{x}(t) = \\boldsymbol{x}_\\mathrm{bc} - \\boldsymbol{K}^{-1}(t)\\boldsymbol{r}_\\mathrm{bc}
+= \\boldsymbol{x}_\\mathrm{bc} - \\boldsymbol{K}^{-1}(t)\\left[\\boldsymbol{K}(t)\\boldsymbol{x}_\\mathrm{bc}-\\boldsymbol{f}(t)\\right]
+= \\boldsymbol{K}^{-1}(t)\\boldsymbol{f}(t)
+```
+is the solution to the current time step. This normally implies when using Ferrite the same procedure as for nonlinear problems, i.e. 
+that the boundary conditions are applied in `update_to_next_step!` and `update_problem!`, as well as the calculation of the residual 
+according to above and that `apply_zero!(K,r,ch)` is called (on both the residual and the stiffness matrix).
+"""
+struct LinearProblemSolver{LinearSolver}
+    linsolver::LinearSolver
+end
+LinearProblemSolver(;linsolver=BackslashSolver()) = LinearProblemSolver(linsolver)
+
+getsystemmatrix(problem, ::LinearProblemSolver) = getjacobian(problem)
+
+function solve_nonlinear!(nlsolver::LinearProblemSolver, problem)
+    update_problem!(problem, nothing; update_residual=true, update_jacobian=true)
+    r = getresidual(problem)
+    K = getsystemmatrix(problem,nlsolver)
+    Δa = similar(getunknowns(problem))
+    solve_linear!(Δa, K, r, nlsolver.linsolver)
+    update_problem!(problem, Δa; update_residual=false, update_jacobian=false)
+    return true # Assume always converged
 end

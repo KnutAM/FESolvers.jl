@@ -4,6 +4,7 @@ using Requires
 export solve_problem!
 
 export QuasiStaticSolver
+export LinearProblemSolver
 export NewtonSolver, SteepestDescent
 export NoLineSearch, ArmijoGoldstein
 export BackslashSolver
