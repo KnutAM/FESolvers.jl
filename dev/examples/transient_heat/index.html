@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Linear Time Dependent Problem · FESolvers.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link rel="canonical" href="https://KnutAM.github.io/FESolvers.jl/examples/transient_heat/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">FESolvers.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="../../solvers/">Solvers</a></li><li><a class="tocitem" href="../../userfunctions/">User problem</a></li><li><a class="tocitem" href="../../nlsolvers/">Nonlinear solvers</a></li><li><a class="tocitem" href="../../timesteppers/">Time steppers</a></li><li><a class="tocitem" href="../../linearsolvers/">Linear solvers</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../plasticity/">Plasticity</a></li><li class="is-active"><a class="tocitem" href>Linear Time Dependent Problem</a><ul class="internal"><li><a class="tocitem" href="#Commented-Program"><span>Commented Program</span></a></li><li><a class="tocitem" href="#transient_heat_equation-plain-program"><span>Plain program</span></a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Linear Time Dependent Problem</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Linear Time Dependent Problem</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/KnutAM/FESolvers.jl/blob/main/docs/src/literate/transient_heat.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Linear-Time-Dependent-Problem"><a class="docs-heading-anchor" href="#Linear-Time-Dependent-Problem">Linear Time Dependent Problem</a><a id="Linear-Time-Dependent-Problem-1"></a><a class="docs-heading-anchor-permalink" href="#Linear-Time-Dependent-Problem" title="Permalink"></a></h1><p>This example is taken from <a href="https://ferrite-fem.github.io/Ferrite.jl/stable/examples/transient_heat_equation/"><code>Ferrite.jl</code>&#39;s transient heat flow</a>. We modify the material parameters to get more time-dependent behavior.</p><p>Currently, only Quasi-static problems are supported by FESolvers. Therefore, we reformulate the linear system compared to remove the mass matrices. We have the same time-discretized weak form:</p><p class="math-container">\[\int_{\Omega} v\, u_{n+1}\ \mathrm{d}\Omega + \Delta t\int_{\Omega} k \nabla v \cdot \nabla u_{n+1} \ \mathrm{d}\Omega = \Delta t\int_{\Omega} v f \ \mathrm{d}\Omega + \int_{\Omega} v \, u_{n} \ \mathrm{d}\Omega.\]</p><p>We then define the linear residual, <span>$r(u_{n+1})$</span>, as</p><p class="math-container">\[r(u_{n+1}) = f_\mathrm{int}(u_{n+1}) - f_\mathrm{ext}(u_{n}) \\
+f_\mathrm{int}(u_{n+1}) = \int_{\Omega} v\, u_{n+1}\ \mathrm{d}\Omega + \Delta t\int_{\Omega} k \nabla v \cdot \nabla u_{n+1} \ \mathrm{d}\Omega  \\
+f_\mathrm{ext}(u_{n}) = \Delta t\int_{\Omega} v f \ \mathrm{d}\Omega + \int_{\Omega} v \, u_{n} \ \mathrm{d}\Omega. \\\]</p><p>giving the discrete operators</p><p class="math-container">\[r_i(\mathbf{u}_{n+1}) = K_{ij} [\mathbf{u}_{n+1}]_j - [\mathbf{f}_\mathrm{ext}(u_{n})]_i\]</p><p>upon introduction of the function approximation, <span>$u(\mathbf{x}) \approx N_i(\mathbf{x}) u_i$</span>, and the test approximation, <span>$v(\mathbf{x}) \approx \delta N_i(\mathbf{x}) v_i$</span> where</p><p class="math-container">\[K_{ij} = \int_{\Omega} \delta N_i(\mathbf{x})\, N_j(\mathbf{x}) \ \mathrm{d}\Omega + \Delta t\int_{\Omega} k \nabla \delta N_i(\mathbf{x}) \cdot \nabla N_j(\mathbf{x}) \ \mathrm{d}\Omega  \\
+\left[\mathbf{f}_\mathrm{ext}(u_{n})\right]_i = \Delta t\int_{\Omega} \delta N_i(\mathbf{x}) f \ \mathrm{d}\Omega + \int_{\Omega} \delta N_i(\mathbf{x}) \, u_{n}(\mathbf{x}) \ \mathrm{d}\Omega.\]</p><p>and the residual expression can be simplified to</p><p class="math-container">\[r_i =
+\int_{\Omega} \delta N_i(\mathbf{x})\, \left[u(\mathbf{x})-u_{n}(\mathbf{x})\right] \ \mathrm{d}\Omega
++ \Delta t\int_{\Omega} k \nabla \delta N_i(\mathbf{x}) \cdot \nabla u(\mathbf{x}) \ \mathrm{d}\Omega
+- \Delta t\int_{\Omega} \delta N_i(\mathbf{x}) f \ \mathrm{d}\Omega\]</p><h2 id="Commented-Program"><a class="docs-heading-anchor" href="#Commented-Program">Commented Program</a><a id="Commented-Program-1"></a><a class="docs-heading-anchor-permalink" href="#Commented-Program" title="Permalink"></a></h2><p>Now we solve the problem by using Ferrite and FESolvers. The full program, without comments, can be found in the next <a href="examples/@ref heat_equation-plain-program">section</a>.</p><p>First we load Ferrite, and some other packages we need.</p><pre><code class="language-julia hljs">using Ferrite, SparseArrays, FESolvers</code></pre><p>Then, we define our problem structs. At the end, we will define a nice constructor for this.</p><pre><code class="language-julia hljs">struct TransientHeat{DEF,BUF,POST}
+    def::DEF    # Problem definition
+    buf::BUF    # Buffers for storing values
+    post::POST  # Struct to save simulation data in each step
+end
+
+struct ProblemDefinition{DH,CH,CV}
+    dh::DH
+    ch::CH
+    cv::CV
+end
+
+function ProblemDefinition()
+    # **Grid**
+    grid = generate_grid(Quadrilateral, (100, 100));
+
+    # **Cell values**
+    dim = 2
+    ip = Lagrange{dim, RefCube, 1}()
+    qr = QuadratureRule{dim, RefCube}(2)
+    cellvalues = CellScalarValues(qr, ip);
+
+    # **Degrees of freedom**
+    # After this, we can define the `DofHandler` and distribute the DOFs of the problem.
+    dh = DofHandler(grid)
+    push!(dh, :u, 1)
+    close!(dh);
+
+    # **Boundary conditions**
+    # In order to define the time dependent problem, we need some end time `T` and something that describes
+    # the linearly increasing Dirichlet boundary condition on $\partial \Omega_2$.
+    max_temp = 100
+    t_rise = 100
+    ch = ConstraintHandler(dh);
+
+    # Here, we define the boundary condition related to $\partial \Omega_1$.
+    ∂Ω₁ = union(getfaceset.((grid,), [&quot;left&quot;, &quot;right&quot;])...)
+    dbc = Dirichlet(:u, ∂Ω₁, (x, t) -&gt; 0)
+    add!(ch, dbc);
+    # While the next code block corresponds to the linearly increasing temperature description on $\partial \Omega_2$
+    # until `t=t_rise`, and then keep constant
+    ∂Ω₂ = union(getfaceset.((grid,), [&quot;top&quot;, &quot;bottom&quot;])...)
+    dbc = Dirichlet(:u, ∂Ω₂, (x, t) -&gt; max_temp * clamp(t / t_rise, 0, 1))
+    add!(ch, dbc)
+    close!(ch)
+    return ProblemDefinition(dh, ch, cellvalues)
+end;</code></pre><p>We then define a problem buffer, that can be created based on the <code>ProblemDefinition</code></p><pre><code class="language-julia hljs">struct ProblemBuffer{KT,T}
+    K::KT
+    r::Vector{T}
+    u::Vector{T}
+    uold::Vector{T}
+    times::Vector{T}    # [t_old, t_current]
+end
+function ProblemBuffer(def::ProblemDefinition)
+    dh = def.dh
+    K = create_sparsity_pattern(dh)
+    r = zeros(ndofs(dh))
+    u = zeros(ndofs(dh))
+    uold = zeros(ndofs(dh))
+    times = zeros(2)
+    return ProblemBuffer(K, r, u, uold, times)
+end;</code></pre><p>We also need functions to assemble the stiffness and residual vectors</p><pre><code class="language-julia hljs">function doassemble!(K::SparseMatrixCSC, r::Vector, cellvalues::CellScalarValues, dh::DofHandler, u, uold, Δt)
+    n_basefuncs = getnbasefunctions(cellvalues)
+    Ke = zeros(n_basefuncs, n_basefuncs)
+    re = zeros(n_basefuncs)
+    ue = zeros(n_basefuncs)
+    ue_old = zeros(n_basefuncs)
+    assembler = start_assemble(K, r)
+    for cell in CellIterator(dh)
+        fill!(Ke, 0)
+        fill!(re, 0)
+        ue .= u[celldofs(cell)]
+        ue_old .= uold[celldofs(cell)]
+        reinit!(cellvalues, cell)
+        element_routine!(Ke, re, cellvalues, ue, ue_old, Δt)
+        assemble!(assembler, celldofs(cell), re, Ke)
+    end
+end
+
+function element_routine!(Ke, re, cellvalues, ue, ue_old, Δt, k=1.0e-3, f=0.5)
+    n_basefuncs = getnbasefunctions(cellvalues)
+    for q_point in 1:getnquadpoints(cellvalues)
+        dΩ = getdetJdV(cellvalues, q_point)
+        u = function_value(cellvalues, q_point, ue)
+        uold = function_value(cellvalues, q_point, ue_old)
+        ∇u = function_gradient(cellvalues, q_point, ue)
+        for i in 1:n_basefuncs
+            δN = shape_value(cellvalues, q_point, i)
+            ∇δN = shape_gradient(cellvalues, q_point, i)
+            re[i] += (δN * (u - uold - Δt * f) + Δt * k * ∇δN ⋅ ∇u) * dΩ
+            for j in 1:n_basefuncs
+                N = shape_value(cellvalues, q_point, j)
+                ∇N = shape_gradient(cellvalues, q_point, j)
+                Ke[i, j] += (δN*N + Δt * k * (∇δN ⋅ ∇N)) * dΩ
+            end
+        end
+    end
+end;</code></pre><p>We now define all the required methods for solving this system with using the <code>LinearProblemSolver</code></p><pre><code class="language-julia hljs">FESolvers.getunknowns(p::TransientHeat) = p.buf.u
+FESolvers.getresidual(p::TransientHeat) = p.buf.r
+FESolvers.getjacobian(p::TransientHeat) = p.buf.K
+
+function FESolvers.update_to_next_step!(p::TransientHeat, time)
+    p.buf.times[2] = time       # Update current time
+    update!(p.def.ch, time)     # Update Dirichlet boundary conditions
+    apply!(FESolvers.getunknowns(p), p.def.ch)
+end
+
+function FESolvers.update_problem!(p::TransientHeat, Δu; update_jacobian, update_residual)
+    if !isnothing(Δu)
+        apply_zero!(Δu, p.def.ch)
+        p.buf.u .+= Δu
+    end
+    # Since the problem is linear, we can save some computations by only updating once per time step
+    # and not after updating the temperatures to check that it has converged.
+    if update_jacobian || update_residual
+        Δt = p.buf.times[2]-p.buf.times[1]
+        doassemble!(p.buf.K, p.buf.r, p.def.cv, p.def.dh, FESolvers.getunknowns(p), p.buf.uold, Δt)
+        apply_zero!(FESolvers.getjacobian(p), FESolvers.getresidual(p), p.def.ch)
+    end
+    return nothing
+end
+
+function FESolvers.handle_converged!(p::TransientHeat)
+    copy!(p.buf.uold, FESolvers.getunknowns(p)) # Set old temperature to current
+    p.buf.times[1] = p.buf.times[2]             # Set old time to current
+end;</code></pre><p>We are now ready to solve the system, but to save some data we must define some postprocessing tasks In this example, we only save things to file</p><pre><code class="language-julia hljs">struct PostProcessing{PVD}
+    pvd::PVD
+end
+PostProcessing() = PostProcessing(paraview_collection(&quot;transient-heat.pvd&quot;));
+
+function FESolvers.postprocess!(p::TransientHeat, step)
+    vtk_grid(&quot;transient-heat-$step&quot;, p.def.dh) do vtk
+        vtk_point_data(vtk, p.def.dh, p.buf.u)
+        vtk_save(vtk)
+        p.post.pvd[step] = vtk
+    end
+end;</code></pre><p>At the end of the simulation, we want to finish all IO operations. We can then define the function <code>close_problem</code> which will be called even in the case that an error is thrown during the simulation</p><pre><code class="language-julia hljs">function FESolvers.close_problem(p::TransientHeat)
+    vtk_save(p.post.pvd)
+end;</code></pre><p>We then define a nice constructor for <code>TransientHeat</code> and can solve the problem,</p><pre><code class="language-julia hljs">TransientHeat(def) = TransientHeat(def, ProblemBuffer(def), PostProcessing());</code></pre><p>And now we create the problem type, and define the QuasiStaticSolver with the LinearProblemSolver as well as fixed time steps</p><pre><code class="language-julia hljs">problem = TransientHeat(ProblemDefinition())
+solver = QuasiStaticSolver(;nlsolver=LinearProblemSolver(), timestepper=FixedTimeStepper(collect(0.0:1.0:200)));</code></pre><p>Finally, we can solve the problem</p><pre><code class="language-julia hljs">solve_problem!(solver, problem);</code></pre><h2 id="transient_heat_equation-plain-program"><a class="docs-heading-anchor" href="#transient_heat_equation-plain-program">Plain program</a><a id="transient_heat_equation-plain-program-1"></a><a class="docs-heading-anchor-permalink" href="#transient_heat_equation-plain-program" title="Permalink"></a></h2><p>Here follows a version of the program without any comments. The file is also available here: <a href="examples/transient_heat_equation.jl"><code>transient_heat_equation.jl</code></a>.</p><pre><code class="language-julia hljs">using Ferrite, SparseArrays, FESolvers
+
+struct TransientHeat{DEF,BUF,POST}
+    def::DEF    # Problem definition
+    buf::BUF    # Buffers for storing values
+    post::POST  # Struct to save simulation data in each step
+end
+
+struct ProblemDefinition{DH,CH,CV}
+    dh::DH
+    ch::CH
+    cv::CV
+end
+
+function ProblemDefinition()
+    # **Grid**
+    grid = generate_grid(Quadrilateral, (100, 100));
+
+    # **Cell values**
+    dim = 2
+    ip = Lagrange{dim, RefCube, 1}()
+    qr = QuadratureRule{dim, RefCube}(2)
+    cellvalues = CellScalarValues(qr, ip);
+
+    # **Degrees of freedom**
+    # After this, we can define the `DofHandler` and distribute the DOFs of the problem.
+    dh = DofHandler(grid)
+    push!(dh, :u, 1)
+    close!(dh);
+
+    # **Boundary conditions**
+    # In order to define the time dependent problem, we need some end time `T` and something that describes
+    # the linearly increasing Dirichlet boundary condition on $\partial \Omega_2$.
+    max_temp = 100
+    t_rise = 100
+    ch = ConstraintHandler(dh);
+
+    # Here, we define the boundary condition related to $\partial \Omega_1$.
+    ∂Ω₁ = union(getfaceset.((grid,), [&quot;left&quot;, &quot;right&quot;])...)
+    dbc = Dirichlet(:u, ∂Ω₁, (x, t) -&gt; 0)
+    add!(ch, dbc);
+    # While the next code block corresponds to the linearly increasing temperature description on $\partial \Omega_2$
+    # until `t=t_rise`, and then keep constant
+    ∂Ω₂ = union(getfaceset.((grid,), [&quot;top&quot;, &quot;bottom&quot;])...)
+    dbc = Dirichlet(:u, ∂Ω₂, (x, t) -&gt; max_temp * clamp(t / t_rise, 0, 1))
+    add!(ch, dbc)
+    close!(ch)
+    return ProblemDefinition(dh, ch, cellvalues)
+end;
+
+struct ProblemBuffer{KT,T}
+    K::KT
+    r::Vector{T}
+    u::Vector{T}
+    uold::Vector{T}
+    times::Vector{T}    # [t_old, t_current]
+end
+function ProblemBuffer(def::ProblemDefinition)
+    dh = def.dh
+    K = create_sparsity_pattern(dh)
+    r = zeros(ndofs(dh))
+    u = zeros(ndofs(dh))
+    uold = zeros(ndofs(dh))
+    times = zeros(2)
+    return ProblemBuffer(K, r, u, uold, times)
+end;
+
+function doassemble!(K::SparseMatrixCSC, r::Vector, cellvalues::CellScalarValues, dh::DofHandler, u, uold, Δt)
+    n_basefuncs = getnbasefunctions(cellvalues)
+    Ke = zeros(n_basefuncs, n_basefuncs)
+    re = zeros(n_basefuncs)
+    ue = zeros(n_basefuncs)
+    ue_old = zeros(n_basefuncs)
+    assembler = start_assemble(K, r)
+    for cell in CellIterator(dh)
+        fill!(Ke, 0)
+        fill!(re, 0)
+        ue .= u[celldofs(cell)]
+        ue_old .= uold[celldofs(cell)]
+        reinit!(cellvalues, cell)
+        element_routine!(Ke, re, cellvalues, ue, ue_old, Δt)
+        assemble!(assembler, celldofs(cell), re, Ke)
+    end
+end
+
+function element_routine!(Ke, re, cellvalues, ue, ue_old, Δt, k=1.0e-3, f=0.5)
+    n_basefuncs = getnbasefunctions(cellvalues)
+    for q_point in 1:getnquadpoints(cellvalues)
+        dΩ = getdetJdV(cellvalues, q_point)
+        u = function_value(cellvalues, q_point, ue)
+        uold = function_value(cellvalues, q_point, ue_old)
+        ∇u = function_gradient(cellvalues, q_point, ue)
+        for i in 1:n_basefuncs
+            δN = shape_value(cellvalues, q_point, i)
+            ∇δN = shape_gradient(cellvalues, q_point, i)
+            re[i] += (δN * (u - uold - Δt * f) + Δt * k * ∇δN ⋅ ∇u) * dΩ
+            for j in 1:n_basefuncs
+                N = shape_value(cellvalues, q_point, j)
+                ∇N = shape_gradient(cellvalues, q_point, j)
+                Ke[i, j] += (δN*N + Δt * k * (∇δN ⋅ ∇N)) * dΩ
+            end
+        end
+    end
+end;
+
+FESolvers.getunknowns(p::TransientHeat) = p.buf.u
+FESolvers.getresidual(p::TransientHeat) = p.buf.r
+FESolvers.getjacobian(p::TransientHeat) = p.buf.K
+
+function FESolvers.update_to_next_step!(p::TransientHeat, time)
+    p.buf.times[2] = time       # Update current time
+    update!(p.def.ch, time)     # Update Dirichlet boundary conditions
+    apply!(FESolvers.getunknowns(p), p.def.ch)
+end
+
+function FESolvers.update_problem!(p::TransientHeat, Δu; update_jacobian, update_residual)
+    if !isnothing(Δu)
+        apply_zero!(Δu, p.def.ch)
+        p.buf.u .+= Δu
+    end
+    # Since the problem is linear, we can save some computations by only updating once per time step
+    # and not after updating the temperatures to check that it has converged.
+    if update_jacobian || update_residual
+        Δt = p.buf.times[2]-p.buf.times[1]
+        doassemble!(p.buf.K, p.buf.r, p.def.cv, p.def.dh, FESolvers.getunknowns(p), p.buf.uold, Δt)
+        apply_zero!(FESolvers.getjacobian(p), FESolvers.getresidual(p), p.def.ch)
+    end
+    return nothing
+end
+
+function FESolvers.handle_converged!(p::TransientHeat)
+    copy!(p.buf.uold, FESolvers.getunknowns(p)) # Set old temperature to current
+    p.buf.times[1] = p.buf.times[2]             # Set old time to current
+end;
+
+struct PostProcessing{PVD}
+    pvd::PVD
+end
+PostProcessing() = PostProcessing(paraview_collection(&quot;transient-heat.pvd&quot;));
+
+function FESolvers.postprocess!(p::TransientHeat, step)
+    vtk_grid(&quot;transient-heat-$step&quot;, p.def.dh) do vtk
+        vtk_point_data(vtk, p.def.dh, p.buf.u)
+        vtk_save(vtk)
+        p.post.pvd[step] = vtk
+    end
+end;
+
+function FESolvers.close_problem(p::TransientHeat)
+    vtk_save(p.post.pvd)
+end;
+
+TransientHeat(def) = TransientHeat(def, ProblemBuffer(def), PostProcessing());
+
+problem = TransientHeat(ProblemDefinition())
+solver = QuasiStaticSolver(;nlsolver=LinearProblemSolver(), timestepper=FixedTimeStepper(collect(0.0:1.0:200)));
+
+solve_problem!(solver, problem);
+
+# This file was generated using Literate.jl, https://github.com/fredrikekre/Literate.jl</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../plasticity/">« Plasticity</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.21 on <span class="colophon-date" title="Tuesday 13 December 2022 07:45">Tuesday 13 December 2022</span>. Using Julia version 1.8.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
