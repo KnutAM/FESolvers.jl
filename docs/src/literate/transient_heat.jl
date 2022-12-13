@@ -39,7 +39,7 @@
 #md # The full program, without comments, can be found in the next [section](@ref heat_equation-plain-program).
 #
 # First we load Ferrite, and some other packages we need.
-using Ferrite, SparseArrays
+using Ferrite, SparseArrays, FESolvers
 # 
 # Then, we define our problem structs. At the end, we will define a nice constructor for this. 
 struct TransientHeat{DEF,BUF,POST}
