@@ -15,7 +15,7 @@ getnlsolver(s::QuasiStaticSolver) = s.nlsolver
 gettimestepper(s::QuasiStaticSolver) = s.timestepper
 
 """
-    solve_problem!(solver, problem)
+    solve_problem!(problem, solver)
 
 Solve a time-dependent problem `r(x(t),t)=0` for `x(t)`, 
 stepping throught the time `t`, using the `solver`.
@@ -23,15 +23,15 @@ stepping throught the time `t`, using the `solver`.
 For details on the functions that should be defined for `problem`,
 see [User problem](@ref)
 """
-function solve_problem!(solver, problem)
+function solve_problem!(problem, solver)
     try
-        _solve_problem!(solver, problem)
+        _solve_problem!(problem, solver)
     finally
         close_problem(problem)
     end
 end
 
-function _solve_problem!(solver::QuasiStaticSolver, problem)
+function _solve_problem!(problem, solver::QuasiStaticSolver)
     t = initial_time(solver.timestepper)
     step = 1
     converged = true

@@ -6,7 +6,7 @@
 Package to easily solve nonlinear problem, in particularily tailored to [Ferrite.jl](https://github.com/Ferrite-FEM/Ferrite.jl).
 By defining `solver = QuasiStaticSolver(nlsolver, timestepper)`, the function 
 ```julia
-solve_problem!(solver::QuasiStaticSolver, problem)
+solve_problem!(problem, solver::QuasiStaticSolver)
 ```
 solves the user-defined `problem`. For this user defined type, 
 the following functions should be defined
