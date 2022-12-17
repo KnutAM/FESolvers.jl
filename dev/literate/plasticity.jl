@@ -195,20 +195,20 @@ function example_solution()
     ## Fixed uniform time steps
     problem = build_problem(def)
     solver = QuasiStaticSolver(NewtonSolver(;tolerance=1.0), FixedTimeStepper(;num_steps=25,Δt=0.04))
-    solve_problem!(solver, problem)
+    solve_problem!(problem, solver)
     plt = plot_results(problem, label="uniform", markershape=:x, markersize=5)
 
     ## Same time steps as Ferrite example
     problem = build_problem(def)
     solver = QuasiStaticSolver(NewtonSolver(;tolerance=1.0), FixedTimeStepper(append!([0.], collect(0.5:0.05:1.0))))
-    solve_problem!(solver, problem)
+    solve_problem!(problem, solver)
     plot_results(problem, plt=plt, label="fixed", markershape=:circle)
 
     ## Adaptive time stepping 
     problem = build_problem(def)
     ts = AdaptiveTimeStepper(0.05, 1.0; Δt_min=0.01, Δt_max=0.2)
     solver = QuasiStaticSolver(NewtonSolver(;tolerance=1.0, maxiter=6), ts)
-    solve_problem!(solver, problem)
+    solve_problem!(problem, solver)
     println(problem.buf.time)
     plot_results(problem, plt=plt, label="adaptive", markershape=:circle)
     plot!(;legend=:bottomright)

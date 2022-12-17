@@ -209,7 +209,7 @@ problem = TransientHeat(ProblemDefinition())
 solver = QuasiStaticSolver(;nlsolver=LinearProblemSolver(), timestepper=FixedTimeStepper(collect(0.0:1.0:200)));
 
 # Finally, we can solve the problem
-solve_problem!(solver, problem);
+solve_problem!(problem, solver);
 
 #md # ## [Plain program](@id transient_heat_equation-plain-program)
 #md #

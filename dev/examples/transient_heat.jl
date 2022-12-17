@@ -155,7 +155,7 @@ TransientHeat(def) = TransientHeat(def, ProblemBuffer(def), PostProcessing());
 problem = TransientHeat(ProblemDefinition())
 solver = QuasiStaticSolver(;nlsolver=LinearProblemSolver(), timestepper=FixedTimeStepper(collect(0.0:1.0:200)));
 
-solve_problem!(solver, problem);
+solve_problem!(problem, solver);
 
 # This file was generated using Literate.jl, https://github.com/fredrikekre/Literate.jl
 
