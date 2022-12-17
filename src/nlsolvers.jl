@@ -237,6 +237,7 @@ getsystemmatrix(problem, ::MatrixSolver{LinearProblem}) = getjacobian(problem)
 check_convergence_criteria(problem, ::MatrixSolver{LinearProblem}, Δa, iter::Int) = iter>1    # Converges in one iteration 
 should_update(::MatrixSolver{LinearProblem}, iter) = (iter==0, iter==0)
 
+
 #=
 function solve_nonlinear!(problem, nlsolver::LinearProblemSolver)
     update_problem!(problem, nothing; update_residual=true, update_jacobian=true)
