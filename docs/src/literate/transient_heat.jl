@@ -36,7 +36,7 @@
 # ## Commented Program
 #
 # Now we solve the problem by using Ferrite and FESolvers. 
-#md # The full program, without comments, can be found in the next [section](@ref heat_equation-plain-program).
+#md # The full program, without comments, can be found in the next [section](@ref transient_heat_equation-plain-program).
 #
 # First we load Ferrite, and some other packages we need.
 using Ferrite, SparseArrays, FESolvers

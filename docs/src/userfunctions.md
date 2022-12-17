@@ -15,6 +15,7 @@ FESolvers.update_to_next_step!
 FESolvers.update_problem!
 FESolvers.handle_converged!
 FESolvers.postprocess!
+FESolvers.close_problem
 ```
 
 
@@ -23,6 +24,7 @@ FESolvers.postprocess!
 FESolvers.calculate_convergence_measure
 FESolvers.getjacobian
 FESolvers.getdescentpreconditioner
+FESolvers.calculate_energy
 ```
 
 ## Advanced API
@@ -31,3 +33,8 @@ FESolvers.getsystemmatrix
 FESolvers.check_convergence_criteria
 ```
 
+## Additional functions
+These functions are usually not necessary to overload 
+```@docs
+FESolvers.setunknowns!
+```

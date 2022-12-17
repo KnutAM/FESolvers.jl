@@ -17,6 +17,12 @@ FESolvers.update_state!
 FESolvers.reset_state!
 ```
 
+The implemented solvers additionally support 
+```@docs
+FESolvers.getnumiter
+FESolvers.getlinesearch
+```
+
 ## Implemented Solvers
 
 ```@docs
