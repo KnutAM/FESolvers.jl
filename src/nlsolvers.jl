@@ -1,5 +1,5 @@
 """
-    solve_nonlinear!(nlsolver, problem)
+    solve_nonlinear!(problem, nlsolver)
 
 Solve the current time step in the nonlinear `problem`, (`r(x) = 0`),
 by using the nonlinear solver: `nlsolver`. 
@@ -122,7 +122,7 @@ function update_state!(s::Union{NewtonSolver,SteepestDescent}, r)
     s.residuals[s.numiter[]] = r 
 end
 
-function solve_nonlinear!(nlsolver, problem)
+function solve_nonlinear!(problem, nlsolver)
     maxiter = getmaxiter(nlsolver)
     reset_state!(nlsolver)
     update_problem!(problem, nothing; update_residual=true, update_jacobian=true)
@@ -177,7 +177,7 @@ LinearProblemSolver(;linsolver=BackslashSolver()) = LinearProblemSolver(linsolve
 
 getsystemmatrix(problem, ::LinearProblemSolver) = getjacobian(problem)
 
-function solve_nonlinear!(nlsolver::LinearProblemSolver, problem)
+function solve_nonlinear!(problem, nlsolver::LinearProblemSolver)
     update_problem!(problem, nothing; update_residual=true, update_jacobian=true)
     r = getresidual(problem)
     K = getsystemmatrix(problem,nlsolver)

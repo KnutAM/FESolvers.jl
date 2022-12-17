@@ -17,7 +17,7 @@ include("test_timesteppers.jl")
     problem = TestProblem()
     timehist = [0.0, 1.0, 2.0, 3.0]
     solver = QuasiStaticSolver(nlsolver=NewtonSolver(;tolerance=tol), timestepper=FixedTimeStepper(timehist))
-    solve_problem!(solver, problem)    
+    solve_problem!(problem, solver)    
     
     @test problem.tv ≈ timehist[2:end]  # First time not postprocessed currently, should it?
     @test length(problem.conv) == (length(timehist)-1)  # Check handle_converged calls
@@ -27,7 +27,7 @@ include("test_timesteppers.jl")
 
     problem = TestProblem(;throw_at_step=3)
     FESolvers.close_problem(p::TestProblem) = push!(p.steps, -1)
-    @test_throws TestError solve_problem!(solver, problem)
+    @test_throws TestError solve_problem!(problem, solver)
     @test length(problem.steps) == 2
     @test last(problem.steps) == -1
 
@@ -35,7 +35,7 @@ include("test_timesteppers.jl")
     k = 1.0
     p_linear = LinearTestProblem(k;dbcfun=t->0.1*t)
     s_linear = QuasiStaticSolver(nlsolver=LinearProblemSolver(), timestepper=FixedTimeStepper(timehist))
-    solve_problem!(s_linear, p_linear)
+    solve_problem!(p_linear, s_linear)
     
     ubc = 0.1*timehist   # Boundary condition 
     # Two springs in series, stiffness is k/2. Displacement Δu = 2f/k

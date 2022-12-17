@@ -25,7 +25,7 @@ include("timesteppers.jl")
 include("QuasiStaticSolver.jl")
 
 """
-    solve_problem!(solver, problem)
+    solve_problem!(problem, solver)
 
 Solve a given user `problem` using the chosen `solver`
 
