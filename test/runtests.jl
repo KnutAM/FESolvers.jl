@@ -16,7 +16,7 @@ include("test_timesteppers.jl")
     tol = 1.e-6
     problem = TestProblem()
     timehist = [0.0, 1.0, 2.0, 3.0]
-    solver = QuasiStaticSolver(nlsolver=NewtonSolver(;tolerance=tol), timestepper=FixedTimeStepper(timehist))
+    solver = QuasiStaticSolver(nlsolver=FESolvers.create_newton_solver(;tolerance=tol), timestepper=FixedTimeStepper(timehist))
     solve_problem!(problem, solver)    
     
     @test problem.tv ≈ timehist[2:end]  # First time not postprocessed currently, should it?
@@ -34,7 +34,7 @@ include("test_timesteppers.jl")
     # Test the fully linear case 
     k = 1.0
     p_linear = LinearTestProblem(k;dbcfun=t->0.1*t)
-    s_linear = QuasiStaticSolver(nlsolver=LinearProblemSolver(), timestepper=FixedTimeStepper(timehist))
+    s_linear = QuasiStaticSolver(nlsolver=FESolvers.create_linear_problem_solver(), timestepper=FixedTimeStepper(timehist))
     solve_problem!(p_linear, s_linear)
     
     ubc = 0.1*timehist   # Boundary condition 
