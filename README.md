@@ -26,7 +26,7 @@ solver = QuasiStaticSolver(;nlsolver=NewtonSolver(), timestepper=FixedTimeSteppe
 
 The problem can then be solved by calling 
 ```julia
-solve_problem(problem, solver)
+solve_problem!(problem, solver)
 ```
 
 For each new time, `t`, in `timestepper`, the user-defined function 
