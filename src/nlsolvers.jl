@@ -36,6 +36,17 @@ Returns the iteration tolerance for the solver
 function gettolerance end
 
 """
+    should_update(nlsolver, iter) -> (Bool, Bool)
+
+Should the residual and and jacobian be updated at the given state. 
+The results are passed as kwargs to `update_problem!`
+Defaults to both `true` if not defined. 
+"""
+should_update(args...) = (true, true)
+
+# Solver state 
+
+"""
     update_state!(nlsolver, r)
 
 A nonlinear solver may solve information about its convergence state.
@@ -54,98 +65,145 @@ reset its state at the beginning of each new time step.
 """
 reset_state!(::Any) = nothing
 
+""" 
+    SolverState{T}
+
+Saves the current state of the nonlinear solver, such as the iteration number 
+and the convergence history (automatically resized)
+"""
+mutable struct SolverState{T}
+    numiter::Int
+    residuals::Vector{T}
+end
+SolverState(::Type{T}, residual_length::Int=1) where T = SolverState(0, zeros(T, residual_length))
+
+getnumiter(ss::SolverState) = ss.numiter 
+get_convergence_history(ss::SolverState) = ss.residuals[1:getnumiter(ss)]
+
+function reset_state!(ss::SolverState)
+    ss.numiter = 0
+    fill!(ss.residuals, 0)
+    return nothing 
+end
+
+function update_state!(ss::SolverState, r)
+    ss.numiter += 1
+    if length(ss.residuals) < ss.numiter
+        push!(ss.residuals, r)
+    else
+        ss.residuals[ss.numiter] = r
+    end
+    return nothing 
+end
+
+# General matrix solver
 
 """
-    NewtonSolver(;linsolver=BackslashSolver(), linesearch=NoLineSearch(), maxiter=10, tolerance=1.e-6)
+    MatrixSolver
 
-Use the standard NewtonRaphson solver to solve the nonlinear 
-problem r(x) = 0 with `tolerance` within the maximum number 
-of iterations `maxiter`. The `linsolver` argument determines the used linear solver
-whereas the `linesearch` can be set currently between `NoLineSearch` or
-`ArmijoGoldstein`. The latter globalizes the Newton strategy.
+A MatrixSolver solves the problem `R(X)=0` by using the 
+update direction `Δx = -K⁻¹ R(X)`, whose length may be 
+adjusted by an optional line search algorithm. 
+The `Type` of matrix `K` to use distinguishes different solvers, 
+such as the `NewtonSolver` (uses the tangent) and 
+the `SteepestDescent` (uses a constant preconditioner matrix 
+that defaults to the identity, `LinearAlgebra.I`)
 """
-struct NewtonSolver{LS,LSearch,T}
-    linsolver::LS
-    linesearch::LSearch
+struct MatrixSolver{Type,LinearSolver,LineSearch,State,T}
+    linearsolver::LinearSolver
+    linesearch::LineSearch
     maxiter::Int 
-    tolerance::T
-    numiter::ScalarWrapper{Int}  # Last step number of iterations
-    residuals::Vector{T}  # Last step residual history
+    tolerance::T 
+    state::State
 end
 
-function NewtonSolver(;linsolver=BackslashSolver(), linesearch=NoLineSearch(), maxiter=10, tolerance=1.e-6)
-    residuals = zeros(typeof(tolerance), maxiter+1)
-    return NewtonSolver(linsolver, linesearch, maxiter, tolerance, ScalarWrapper(0), residuals)
+function MatrixSolver{Type}(linearsolver::LinearSolver, linesearch::LineSearch, maxiter, tolerance::T, 
+        state::State=SolverState(T, maxiter+1)) where {Type,LinearSolver,LineSearch,T,State}
+    return MatrixSolver{Type, LinearSolver, LineSearch, State, T}(linearsolver, linesearch, maxiter, tolerance, state)
 end
-getsystemmatrix(problem, ::NewtonSolver) = getjacobian(problem)
 
 
-@doc raw"""
-    SteepestDescent(;maxiter=10, tolerance=1.e-6)
-
-Use a steepest descent solver to solve the nonlinear 
-problem r(x) = 0, which minimizes a potential \Pi with `tolerance`
-and the maximum number of iterations `maxiter`.
-
-This method is second derivative free and is not as locally limited as a Newton-Raphson scheme.
-Thus, it is especially suited for stronlgy nonlinear behavior with potentially vanishing tangent stiffnesses.
 """
-Base.@kwdef struct SteepestDescent{LineSearch,LinearSolver,T}
-    linsolver::LinearSolver = BackslashSolver()
-    linesearch::LineSearch = ArmijoGoldstein()
-    maxiter::Int = 200
-    tolerance::T = 1e-6
-    numiter::ScalarWrapper{Int} = ScalarWrapper(0)  # Last step number of iterations
-    residuals::Vector{T} = zeros(typeof(tolerance),maxiter+1)  # Last step residual history
-end
-getsystemmatrix(problem, ::SteepestDescent) = getdescentpreconditioner(problem)
+    getlinearsolver(nlsolver::MatrixSolver)
 
+Returns the linear solver for `nlsolver`
+"""
+getlinearsolver(nlsolver::MatrixSolver) = nlsolver.linearsolver
 
 """
     getlinesearch(nlsolver)
 Returns the used linesearch of the nonlinear solver.
 """
-getlinesearch(nlsolver::Union{NewtonSolver,SteepestDescent}) = nlsolver.linesearch
+getlinesearch(nlsolver::MatrixSolver) = nlsolver.linesearch
 
-getmaxiter(nlsolver::Union{NewtonSolver,SteepestDescent}) = nlsolver.maxiter
-gettolerance(nlsolver::Union{NewtonSolver,SteepestDescent}) = nlsolver.tolerance
-getnumiter(s::Union{NewtonSolver,SteepestDescent}) = s.numiter[]
+getmaxiter(nlsolver::MatrixSolver) = nlsolver.maxiter
+gettolerance(nlsolver::MatrixSolver) = nlsolver.tolerance
+getnumiter(s::MatrixSolver) = getnumiter(s.state)
+reset_state!(s::MatrixSolver) = reset_state!(s.state)
+update_state!(s::MatrixSolver, args...) = update_state!(s.state, args...)
 
+"""
+    create_newton_solver(;linsolver=BackslashSolver(), linesearch=NoLineSearch(), maxiter=10, tolerance=1.e-6)
 
-function reset_state!(s::Union{NewtonSolver,SteepestDescent})
-    s.numiter[] = 0
-    fill!(s.residuals, 0)
+Create a `MatrixSolver` that always uses the updated jacobian matrix. 
+Use the standard Newton-Raphson solver to solve the nonlinear 
+problem r(x) = 0 with `tolerance` within the maximum number 
+of iterations `maxiter`. The `linsolver` argument determines the used linear solver
+whereas the `linesearch` can be set currently between `NoLineSearch` or
+`ArmijoGoldstein`. The latter globalizes the Newton strategy.
+"""
+struct NewtonSolver end
+
+function create_newton_solver(;linsolver=BackslashSolver(), linesearch=NoLineSearch(), maxiter=10, tolerance=1.e-6)
+    return MatrixSolver{NewtonSolver}(linsolver, linesearch, maxiter, tolerance)
 end
+getsystemmatrix(problem, ::MatrixSolver{NewtonSolver}) = getjacobian(problem)
+should_update(::MatrixSolver{NewtonSolver}, iter) = (true, true)
 
-function update_state!(s::Union{NewtonSolver,SteepestDescent}, r)
-    s.numiter[] += 1
-    s.residuals[s.numiter[]] = r 
+
+"""
+    create_steepest_descent_solver(;maxiter=200, tolerance=1.e-6)
+
+Create a `MatrixSolver` that does a steepest descents to solve the nonlinear 
+problem r(x) = 0, which minimizes a potential `Π` with `tolerance`
+and the maximum number of iterations `maxiter`.
+
+This method is second derivative free and is not as locally limited as a Newton-Raphson scheme.
+Thus, it is especially suited for strongly nonlinear behavior with potentially vanishing tangent stiffnesses.
+"""
+struct SteepestDescent end
+function create_steepest_descent_solver(;linsolver=BackslashSolver(), linesearch=ArmijoGoldstein(), maxiter=200, tolerance=1e-6)
+    return MatrixSolver{SteepestDescent}(linsolver, linesearch, maxiter, tolerance)
 end
+getsystemmatrix(problem, ::MatrixSolver{SteepestDescent}) = getdescentpreconditioner(problem)
+should_update(::MatrixSolver{SteepestDescent}, iter) = (true, false)
 
 function solve_nonlinear!(problem, nlsolver)
     maxiter = getmaxiter(nlsolver)
     reset_state!(nlsolver)
-    update_problem!(problem, nothing; update_residual=true, update_jacobian=true)
+    update_residual, update_jacobian = should_update(nlsolver, 0)
+    update_problem!(problem, nothing; update_residual=update_residual, update_jacobian=update_jacobian)
     Δa = zero(getunknowns(problem))
     for iter in 1:maxiter
         check_convergence_criteria(problem, nlsolver, Δa, iter) && return true
         calculate_update!(Δa, problem, nlsolver, iter)
-        update_problem!(problem, Δa; update_residual=true, update_jacobian=true)
+        update_residual, update_jacobian = should_update(nlsolver, iter)
+        update_problem!(problem, Δa; update_residual=update_residual, update_jacobian=update_jacobian)
     end
     check_convergence_criteria(problem, nlsolver, Δa, maxiter+1) && return true
     return false
 end
 
-function calculate_update!(Δa, problem, nlsolver::Union{SteepestDescent,NewtonSolver}, iter)
+function calculate_update!(Δa, problem, nlsolver::MatrixSolver, iter)
     r = getresidual(problem)
     K = getsystemmatrix(problem,nlsolver)
-    solve_linear!(Δa, K, r, nlsolver.linsolver)
+    solve_linear!(Δa, K, r, getlinearsolver(nlsolver))
     linesearch!(Δa, problem, getlinesearch(nlsolver)) # Scale Δa
     return Δa
 end
 
 """
-    LinearProblemSolver(;linsolver=BackslashSolver())
+    create_linear_problem_solver(;linsolver=BackslashSolver())
 
 This is a special type of "Nonlinear solver", which actually only solves linear problems, 
 but allows all other features (i.e. time stepping and postprocessing) of the `FESolvers` 
@@ -170,13 +228,16 @@ is the solution to the current time step. This normally implies when using Ferri
 that the boundary conditions are applied in `update_to_next_step!` and `update_problem!`, as well as the calculation of the residual 
 according to above and that `apply_zero!(K,r,ch)` is called (on both the residual and the stiffness matrix).
 """
-struct LinearProblemSolver{LinearSolver}
-    linsolver::LinearSolver
+struct LinearProblem end 
+function create_linear_problem_solver(;linearsolver=BackslashSolver())
+    return MatrixSolver{LinearProblem}(linearsolver, NoLineSearch(), 1, NaN, nothing)
 end
-LinearProblemSolver(;linsolver=BackslashSolver()) = LinearProblemSolver(linsolver)
+getsystemmatrix(problem, ::MatrixSolver{LinearProblem}) = getjacobian(problem)
 
-getsystemmatrix(problem, ::LinearProblemSolver) = getjacobian(problem)
+check_convergence_criteria(problem, ::MatrixSolver{LinearProblem}, Δa, iter::Int) = iter>1    # Converges in one iteration 
+should_update(::MatrixSolver{LinearProblem}, iter) = (iter==0, iter==0)
 
+#=
 function solve_nonlinear!(problem, nlsolver::LinearProblemSolver)
     update_problem!(problem, nothing; update_residual=true, update_jacobian=true)
     r = getresidual(problem)
@@ -186,3 +247,4 @@ function solve_nonlinear!(problem, nlsolver::LinearProblemSolver)
     update_problem!(problem, Δa; update_residual=false, update_jacobian=false)
     return true # Assume always converged
 end
+=#
