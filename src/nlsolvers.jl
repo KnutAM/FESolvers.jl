@@ -169,6 +169,9 @@ such that
 is the solution to the current time step. This normally implies when using Ferrite the same procedure as for nonlinear problems, i.e. 
 that the boundary conditions are applied in `update_to_next_step!` and `update_problem!`, as well as the calculation of the residual 
 according to above and that `apply_zero!(K,r,ch)` is called (on both the residual and the stiffness matrix).
+
+If you have strange results when running the `LinearProblemSolver`, 
+please ensure that the problem converges in one iteration for the [`NewtonSolver`](@ref)
 """
 struct LinearProblemSolver{LinearSolver}
     linsolver::LinearSolver
@@ -176,6 +179,11 @@ end
 LinearProblemSolver(;linsolver=BackslashSolver()) = LinearProblemSolver(linsolver)
 
 getsystemmatrix(problem, ::LinearProblemSolver) = getjacobian(problem)
+
+# Support this just for convenience, it makes it easier when printing status etc. 
+getnumiter(::LinearProblemSolver) = 0
+getmaxiter(::LinearProblemSolver) = 1
+gettolerance(::LinearProblemSolver) = NaN
 
 function solve_nonlinear!(problem, nlsolver::LinearProblemSolver)
     update_problem!(problem, nothing; update_residual=true, update_jacobian=true)
