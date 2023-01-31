@@ -40,37 +40,37 @@ struct PlasticityModel{DH,CH,IP,M}
 end
 
 function PlasticityModel()
-    # Material
+    ## Material
     E = 200.0e9
     H = E/20
     ν = 0.3
     σ₀ = 200e6
     material = J2Plasticity(E, ν, σ₀, H)
 
-    # Geometry
+    ## Geometry
     L = 10.0
     w = 1.0
     h = 1.0
 
-    # Loading
+    ## Loading
     traction_rate = 1.e7    # N/s
 
-    # Grid
+    ## Grid
     n = 2
     nels = (10n, n, 2n)
     P1 = Vec((0.0, 0.0, 0.0))
     P2 = Vec((L, w, h))
     grid = generate_grid(Tetrahedron, nels, P1, P2)
 
-    # Interpolation
+    ## Interpolation
     ip = Lagrange{3, RefTetrahedron, 1}()
 
-    # DofHandler
+    ## DofHandler
     dh = DofHandler(grid)
     add!(dh, :u, 3, ip)
     close!(dh)
     
-    # ConstraintHandler
+    ## ConstraintHandler
     ch = ConstraintHandler(dh)
     add!(ch, Dirichlet(:u, getfaceset(grid, "left"), Returns(zeros(3))))
     close!(ch)
