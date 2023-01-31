@@ -233,9 +233,6 @@ end;
 
 example_solution()
 
-# Which gives the following result 
-# ![](plasticity.svg)
-
 #md # ## Plain program
 #md #
 #md # Here follows a version of the program without any comments.
