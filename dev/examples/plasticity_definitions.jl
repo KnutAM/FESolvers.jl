@@ -80,39 +80,6 @@ function compute_stress_tangent(ϵ::SymmetricTensor{2, 3}, material::J2Plasticit
     end
 end
 
-function create_values(interpolation)
-    ## setup quadrature rules
-    qr      = QuadratureRule{3,RefTetrahedron}(2)
-    face_qr = QuadratureRule{2,RefTetrahedron}(3)
-
-    ## create geometric interpolation (use the same as for u)
-    interpolation_geom = Lagrange{3,RefTetrahedron,1}()
-
-    ## cell and facevalues for u
-    cellvalues_u = CellVectorValues(qr, interpolation, interpolation_geom)
-    facevalues_u = FaceVectorValues(face_qr, interpolation, interpolation_geom)
-
-    return cellvalues_u, facevalues_u
-end;
-
-function create_dofhandler(grid, interpolation)
-    dh = DofHandler(grid)
-    dim = 3
-    push!(dh, :u, dim, interpolation) # add a displacement field with 3 components
-    close!(dh)
-    return dh
-end
-
-function create_bc(dh, grid)
-    dbcs = ConstraintHandler(dh)
-    ## Clamped on the left side
-    dofs = [1, 2, 3]
-    dbc = Dirichlet(:u, getfaceset(grid, "left"), (x,t) -> [0.0, 0.0, 0.0], dofs)
-    add!(dbcs, dbc)
-    close!(dbcs)
-    return dbcs
-end;
-
 function doassemble!(cellvalues::CellVectorValues{dim},
                     facevalues::FaceVectorValues{dim}, K::SparseMatrixCSC, r::Vector, grid::Grid,
                     dh::DofHandler, material::J2Plasticity, u, states, states_old) where {dim}
