@@ -14,10 +14,10 @@
 using FESolvers, Ferrite, Tensors, SparseArrays, LinearAlgebra, Plots
 
 # We first include some basic definitions taken and modified from the original 
-# [example](https://ferrite-fem.github.io/Ferrite.jl/stable/examples/plasticity/). 
-# These definitions are available here: [plasticity_definitions.jl](plasticity_definitions.jl),
-# and include specifically the material definitions: `J2Plasticity` and `J2PlasticityMaterialState`, 
-# as well as the `doassemble!` function.
+# [example](https://ferrite-fem.github.io/Ferrite.jl/stable/examples/plasticity/),
+# specifically the material definitions: `J2Plasticity` and `J2PlasticityMaterialState`, 
+# as well as the `doassemble!` function. The exact definitions are available here:
+# [plasticity_definitions.jl](plasticity_definitions.jl),
 include("plasticity_definitions.jl");
 
 # ## Problem definition
@@ -41,31 +41,22 @@ end
 
 function PlasticityModel()
     ## Material
-    E = 200.0e9
-    H = E/20
-    ν = 0.3
-    σ₀ = 200e6
+    E = 200.0e9; ν = 0.3    # Young's modulus and Poisson's ratio
+    σ₀ = 200e6; H = E/20    # Yield limit and hardening modulus
     material = J2Plasticity(E, ν, σ₀, H)
 
-    ## Geometry
-    L = 10.0
-    w = 1.0
-    h = 1.0
+    ## Geometry (length, width, height)
+    L = 10.0; w = 1.0; h = 1.0
 
     ## Loading
     traction_rate = 1.e7    # N/s
 
-    ## Grid
-    n = 2
-    nels = (10n, n, 2n)
-    P1 = Vec((0.0, 0.0, 0.0))
-    P2 = Vec((L, w, h))
-    grid = generate_grid(Tetrahedron, nels, P1, P2)
+    ## Grid (beam)
+    nels = (20, 2, 4)
+    grid = generate_grid(Tetrahedron, nels, zero(Vec{3}), Vec((L, w, h)))
 
-    ## Interpolation
+    ## Interpolation and DofHandler
     ip = Lagrange{3, RefTetrahedron, 1}()
-
-    ## DofHandler
     dh = DofHandler(grid)
     add!(dh, :u, 3, ip)
     close!(dh)
