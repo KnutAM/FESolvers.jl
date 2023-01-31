@@ -1,19 +1,23 @@
 # # Plasticity
 
-# This example is taken from 
+# This example is based on 
 # [Ferrite.jl's plasticity example](https://ferrite-fem.github.io/Ferrite.jl/stable/examples/plasticity/)
-# and shows how `FESolvers` can be used to solve this nonlinear problem with time dependent loading.
+# and modified to show how `FESolvers` can be used to solve this nonlinear problem with time dependent loading.
 # 
 #md # !!! note
-#md #     This example is preliminary, and does not represent good coding practice. 
-#md #     This will be improved in the future as the `FESolvers` package matures
+#md #     This example is preliminary, and doesn't necessarily represent good coding practice. 
+#md #     As an example of a more general implementation, please see 
+#md #     [`FerriteProblems.jl`](https://github.com/KnutAM/FerriteProblems.jl) and its 
+#md #     [example](https://knutam.github.io/FerriteProblems.jl/dev/examples/plasticity/)
 # 
 # First we need to load all required packages
 using FESolvers, Ferrite, Tensors, SparseArrays, LinearAlgebra, Plots
 
 # We first include some basic definitions taken and modified from the original 
-# [example](https://ferrite-fem.github.io/Ferrite.jl/stable/examples/plasticity/). 
-# These definitions are available here: [plasticity_definitions.jl](plasticity_definitions.jl)
+# [example](https://ferrite-fem.github.io/Ferrite.jl/stable/examples/plasticity/),
+# specifically the material definitions: `J2Plasticity` and `J2PlasticityMaterialState`, 
+# as well as the `doassemble!` function. The exact definitions are available here:
+# [plasticity_definitions.jl](plasticity_definitions.jl),
 include("plasticity_definitions.jl");
 
 # ## Problem definition
@@ -27,62 +31,71 @@ struct PlasticityProblem{PD,PB,PP}
 end
 
 # `PlasticityModel` is our `def` and contain all problem settings (mesh, material, loads, interpolations, etc.)
-struct PlasticityModel
-    grid
-    interpolation
-    dh
-    material
-    traction_rate
-    dbcs
+struct PlasticityModel{DH,CH,IP,M}
+    dh::DH
+    ch::CH
+    interpolation::IP
+    material::M
+    traction_rate::Float64
 end
 
 function PlasticityModel()
-    E = 200.0e9
-    H = E/20
-    ν = 0.3 
-    σ₀ = 200e6
+    ## Material
+    E = 200.0e9; ν = 0.3    # Young's modulus and Poisson's ratio
+    σ₀ = 200e6; H = E/20    # Yield limit and hardening modulus
     material = J2Plasticity(E, ν, σ₀, H)
 
-    L = 10.0
-    w = 1.0
-    h = 1.0
+    ## Geometry (length, width, height)
+    L = 10.0; w = 1.0; h = 1.0
 
+    ## Loading
     traction_rate = 1.e7    # N/s
 
-    n = 2
-    nels = (10n, n, 2n)
-    P1 = Vec((0.0, 0.0, 0.0))
-    P2 = Vec((L, w, h))
-    grid = generate_grid(Tetrahedron, nels, P1, P2)
-    interpolation = Lagrange{3, RefTetrahedron, 1}()
-    dh = create_dofhandler(grid, interpolation)
-    dbcs = create_bc(dh, grid)
-    return PlasticityModel(grid,interpolation,dh,material,traction_rate,dbcs)
+    ## Grid (beam)
+    nels = (20, 2, 4)
+    grid = generate_grid(Tetrahedron, nels, zero(Vec{3}), Vec((L, w, h)))
+
+    ## Interpolation and DofHandler
+    ip = Lagrange{3, RefTetrahedron, 1}()
+    dh = DofHandler(grid)
+    add!(dh, :u, 3, ip)
+    close!(dh)
+    
+    ## ConstraintHandler
+    ch = ConstraintHandler(dh)
+    add!(ch, Dirichlet(:u, getfaceset(grid, "left"), Returns(zeros(3))))
+    close!(ch)
+    return PlasticityModel(dh, ch, ip, material, traction_rate)
 end;
 
-# `PlasticityFEBuffer` is our `buf` and contain all problem arrays and other allocated values 
-struct PlasticityFEBuffer
-    cellvalues
-    facevalues
-    K
-    r
-    u
-    states
-    states_old
-    time::Vector # length(time)=1, could use ScalarBuffer instead
+# `PlasticityFEBuffer` is our `buf` and contains all problem arrays and other allocated values 
+struct PlasticityFEBuffer{CV,FV,KT,T,ST}
+    cv::CV          # CellValues
+    fv::FV          # FaceValues
+    K::KT           # Stiffness matrix
+    r::Vector{T}    # Residual vector
+    u::Vector{T}    # Unknown vector
+    states::Matrix{ST}
+    states_old::Matrix{ST}
+    time::Vector{T}     # Just a vector to allow mutating the time 
+    old_time::Vector{T} # Same as time (not needed, but shown for completeness)
 end
 
 function build_febuffer(model::PlasticityModel)
     dh = model.dh
     n_dofs = ndofs(dh)
-    cellvalues, facevalues = create_values(model.interpolation)
+    qr      = QuadratureRule{3,RefTetrahedron}(2)
+    face_qr = QuadratureRule{2,RefTetrahedron}(3)
+    ip_geo = Ferrite.default_interpolation(Ferrite.getcelltype(dh.grid))
+    cv = CellVectorValues(qr, model.interpolation, ip_geo)
+    fv = FaceVectorValues(face_qr, model.interpolation, ip_geo)
     u  = zeros(n_dofs)
     r = zeros(n_dofs)
     K = create_sparsity_pattern(dh)
-    nqp = getnquadpoints(cellvalues)
-    states = [J2PlasticityMaterialState() for _ in 1:nqp, _ in 1:getncells(model.grid)]
-    states_old = [J2PlasticityMaterialState() for _ in 1:nqp, _ in 1:getncells(model.grid)]
-    return PlasticityFEBuffer(cellvalues,facevalues,K,r,u,states,states_old,[0.0])
+    nqp = getnquadpoints(cv)
+    states = [J2PlasticityMaterialState() for _ in 1:nqp, _ in 1:getncells(model.dh.grid)]
+    states_old = [J2PlasticityMaterialState() for _ in 1:nqp, _ in 1:getncells(model.dh.grid)]
+    return PlasticityFEBuffer(cv,fv,K,r,u,states,states_old,[0.0], [0.0])
 end;
 
 # Finally, we define our `post` that contains variables that we will save during the simulation
@@ -100,19 +113,21 @@ build_problem(def::PlasticityModel) = PlasticityProblem(def, build_febuffer(def)
 # We then define a separate function for the Neumann boundary conditions 
 # (note that this difference to the original example is not required, 
 # but only to separate the element assembly and external boundary conditions)
-function apply_neumann!(model::PlasticityModel,buffer::PlasticityFEBuffer)
-    t = buffer.time[1]
-    nu = getnbasefunctions(buffer.cellvalues)
+# This could also be further simplified by using 
+# [FerriteNeumann.jl](https://github.com/KnutAM/FerriteNeumann.jl)
+function apply_neumann!(model::PlasticityModel,buf::PlasticityFEBuffer)
+    t = buf.time[1]
+    nu = getnbasefunctions(buf.cv)
     re = zeros(nu)
-    facevalues = buffer.facevalues
-    grid = model.grid
+    facevalues = buf.fv
+    grid = model.dh.grid
     traction = Vec((0.0, 0.0, model.traction_rate*t))
 
     for (i, cell) in enumerate(CellIterator(model.dh))
         fill!(re, 0)
         eldofs = celldofs(cell)
         for face in 1:nfaces(cell)
-            if onboundary(cell, face) && (cellid(cell), face) ∈ getfaceset(grid, "right")
+            if (cellid(cell), face) ∈ getfaceset(grid, "right")
                 reinit!(facevalues, cell, face)
                 for q_point in 1:getnquadpoints(facevalues)
                     dΓ = getdetJdV(facevalues, q_point)
@@ -123,7 +138,7 @@ function apply_neumann!(model::PlasticityModel,buffer::PlasticityFEBuffer)
                 end
             end
         end
-        buffer.r[eldofs] .+= re
+        buf.r[eldofs] .+= re
     end   
 end;
 
@@ -140,6 +155,7 @@ FESolvers.getjacobian(p::PlasticityProblem) = p.buf.K;
 # possible to make an improved guess for the solution to this time step if desired. 
 function FESolvers.update_to_next_step!(p::PlasticityProblem, time)
     p.buf.time .= time
+    update!(p.def.ch, time) # No influence in this particular example
 end;
 
 # Next, we define the updating of the problem given a new guess to the solution. 
@@ -150,31 +166,32 @@ function FESolvers.update_problem!(p::PlasticityProblem, Δu; kwargs...)
     buf = p.buf 
     def = p.def
     if !isnothing(Δu)
-        apply_zero!(Δu, p.def.dbcs)
+        apply_zero!(Δu, p.def.ch)
         buf.u .+= Δu
     end
-    doassemble!(buf.cellvalues, buf.facevalues, buf.K, buf.r,
-                def.grid, def.dh, def.material, buf.u, buf.states, buf.states_old)
+    doassemble!(buf.cv, buf.fv, buf.K, buf.r,
+                def.dh.grid, def.dh, def.material, buf.u, buf.states, buf.states_old)
     apply_neumann!(def,buf)
-    apply_zero!(buf.K, buf.r, def.dbcs)
+    apply_zero!(buf.K, buf.r, def.ch)
 end;
 
 # In this example, we use the standard convergence criterion that the norm of the free 
 # degrees of freedom is less than the iteration tolerance. 
-FESolvers.calculate_convergence_measure(p::PlasticityProblem, args...) = norm(FESolvers.getresidual(p)[free_dofs(p.def.dbcs)]);
+FESolvers.calculate_convergence_measure(p::PlasticityProblem, args...) = norm(FESolvers.getresidual(p)[free_dofs(p.def.ch)]);
 
-# After convergence, we need to update the state variables. 
-function FESolvers.handle_converged!(p::PlasticityProblem)
-    p.buf.states_old .= p.buf.states
-end;
-
-# As postprocessing, which is called after `handle_converged!`, we save
-# the maximum displacement as well as the traction magnitude.
+# As postprocessing, which is called after we detect that the solution has converged, 
+# we save the maximum displacement as well as the traction magnitude.
 function FESolvers.postprocess!(p::PlasticityProblem, step)
     push!(p.post.umax, maximum(abs, FESolvers.getunknowns(p)))
     push!(p.post.tmag, p.def.traction_rate*p.buf.time[1])
 end;
 
+# After convergence (and postprocessing of that step),
+# we also need to update the state variables and the time
+function FESolvers.handle_converged!(p::PlasticityProblem)
+    p.buf.states_old .= p.buf.states
+    p.buf.old_time .= p.buf.time
+end;
 
 # ## Solving the problem
 # First, we define a helper function to plot the results after the solution
@@ -215,9 +232,6 @@ function example_solution()
 end;
 
 example_solution()
-
-# Which gives the following result 
-# ![](plasticity.svg)
 
 #md # ## Plain program
 #md #
