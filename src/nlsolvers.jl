@@ -64,18 +64,18 @@ of iterations `maxiter`. The `linsolver` argument determines the used linear sol
 whereas the `linesearch` can be set currently between `NoLineSearch` or
 `ArmijoGoldstein`. The latter globalizes the Newton strategy.
 """
-struct NewtonSolver{LS,LSearch,T}
-    linsolver::LS
-    linesearch::LSearch
-    maxiter::Int 
-    tolerance::T
-    numiter::ScalarWrapper{Int}  # Last step number of iterations
-    residuals::Vector{T}  # Last step residual history
+mutable struct NewtonSolver{LS,LSearch,T}
+    const linsolver::LS
+    const linesearch::LSearch
+    const maxiter::Int 
+    const tolerance::T
+    numiter::Int        # Last step number of iterations
+    const residuals::Vector{T}  # Last step residual history
 end
 
 function NewtonSolver(;linsolver=BackslashSolver(), linesearch=NoLineSearch(), maxiter=10, tolerance=1.e-6)
     residuals = zeros(typeof(tolerance), maxiter+1)
-    return NewtonSolver(linsolver, linesearch, maxiter, tolerance, ScalarWrapper(0), residuals)
+    return NewtonSolver(linsolver, linesearch, maxiter, tolerance, 0, residuals)
 end
 getsystemmatrix(problem, ::NewtonSolver) = getjacobian(problem)
 
@@ -90,13 +90,13 @@ and the maximum number of iterations `maxiter`.
 This method is second derivative free and is not as locally limited as a Newton-Raphson scheme.
 Thus, it is especially suited for stronlgy nonlinear behavior with potentially vanishing tangent stiffnesses.
 """
-Base.@kwdef struct SteepestDescent{LineSearch,LinearSolver,T}
-    linsolver::LinearSolver = BackslashSolver()
-    linesearch::LineSearch = ArmijoGoldstein()
-    maxiter::Int = 200
-    tolerance::T = 1e-6
-    numiter::ScalarWrapper{Int} = ScalarWrapper(0)  # Last step number of iterations
-    residuals::Vector{T} = zeros(typeof(tolerance),maxiter+1)  # Last step residual history
+Base.@kwdef mutable struct SteepestDescent{LineSearch,LinearSolver,T}
+    const linsolver::LinearSolver = BackslashSolver()
+    const linesearch::LineSearch = ArmijoGoldstein()
+    const maxiter::Int = 200
+    const tolerance::T = 1e-6
+    numiter::Int = 0  # Last step number of iterations
+    const residuals::Vector{T} = zeros(typeof(tolerance),maxiter+1)  # Last step residual history
 end
 getsystemmatrix(problem, ::SteepestDescent) = getdescentpreconditioner(problem)
 
@@ -109,17 +109,17 @@ getlinesearch(nlsolver::Union{NewtonSolver,SteepestDescent}) = nlsolver.linesear
 
 getmaxiter(nlsolver::Union{NewtonSolver,SteepestDescent}) = nlsolver.maxiter
 gettolerance(nlsolver::Union{NewtonSolver,SteepestDescent}) = nlsolver.tolerance
-getnumiter(s::Union{NewtonSolver,SteepestDescent}) = s.numiter[]
+getnumiter(s::Union{NewtonSolver,SteepestDescent}) = s.numiter
 
 
 function reset_state!(s::Union{NewtonSolver,SteepestDescent})
-    s.numiter[] = 0
+    s.numiter = 0
     fill!(s.residuals, 0)
 end
 
 function update_state!(s::Union{NewtonSolver,SteepestDescent}, r)
-    s.numiter[] += 1
-    s.residuals[s.numiter[]] = r 
+    s.numiter += 1
+    s.residuals[s.numiter] = r 
 end
 
 function solve_nonlinear!(problem, nlsolver)

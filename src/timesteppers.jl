@@ -83,16 +83,16 @@ If `numiter=maxiter`, then `m=1` and the time step update is the same as
 for a non-converged solution if `k=1`. Note that `k>0`, `change_factor∈[0,1]`,
 and `optiter_ratio∈[0,1]` are expected, otherwise warnings are thrown. 
 """
-struct AdaptiveTimeStepper{T}
-    t_start::T
-    t_end::T
-    Δt_init::T
-    Δt_min::T
-    Δt_max::T
-    change_factor::T
-    optiter_ratio::T
-    k::T
-    Δt::ScalarWrapper{T}
+mutable struct AdaptiveTimeStepper{T}
+    const t_start::T
+    const t_end::T
+    const Δt_init::T
+    const Δt_min::T
+    const Δt_max::T
+    const change_factor::T
+    const optiter_ratio::T
+    const k::T
+    Δt::T
 end
 
 function AdaptiveTimeStepper(
@@ -116,7 +116,7 @@ function AdaptiveTimeStepper(
 
     return AdaptiveTimeStepper(
         t_start, t_end, Δt_init, Δt_min, Δt_max,
-        change_factor, optiter_ratio, k, ScalarWrapper(Δt_init))
+        change_factor, optiter_ratio, k, Δt_init)
 end
 
 initial_time(ts::AdaptiveTimeStepper) = ts.t_start 
@@ -128,38 +128,38 @@ function update_time(ts::AdaptiveTimeStepper, nlsolver, t, step, converged)
             msg = "step=1 implies initial step and then \"convergence of the previous step\" must be true"
             throw(ArgumentError(msg))
         end
-        ts.Δt[] = min(t+ts.Δt_init, ts.t_end)-t
-        return t+ts.Δt[], step+1
+        ts.Δt = min(t+ts.Δt_init, ts.t_end)-t
+        return t+ts.Δt, step+1
     end
 
     if !converged
-        if ts.Δt[] ≈ ts.Δt_min
+        if ts.Δt ≈ ts.Δt_min
             msg = "The nonlinear solve failed and the AdaptiveTimeStepper is at its minimum time step"
             throw(ConvergenceError(msg))
         end
-        t -= ts.Δt[]
-        ts.Δt[] = max(ts.Δt[]*ts.change_factor, ts.Δt_min)
+        t -= ts.Δt
+        ts.Δt = max(ts.Δt*ts.change_factor, ts.Δt_min)
     else
         numiter = getnumiter(nlsolver)
         maxiter = getmaxiter(nlsolver)
         optiter = Int(floor(ts.optiter_ratio*maxiter))
         m = (numiter-optiter)/(maxiter-optiter)
-        ts.Δt[] = min(max(ts.Δt[] * (ts.change_factor^m), ts.Δt_min), ts.Δt_max)
+        ts.Δt = min(max(ts.Δt * (ts.change_factor^m), ts.Δt_min), ts.Δt_max)
         step += 1
     end
 
     # Ensure that the last time step is not too short.
     # With the following algorithm, the last two time steps
     # are only guaranteed to be > Δt_min/2
-    t_remaining = ts.t_end - (t+ts.Δt[])
+    t_remaining = ts.t_end - (t+ts.Δt)
     if t_remaining < eps(t)
-        ts.Δt[] = ts.t_end-t
+        ts.Δt = ts.t_end-t
         t = ts.t_end
     elseif t_remaining < ts.Δt_min
-        ts.Δt[] = (ts.t_end - t)/2
-        t += ts.Δt[]
+        ts.Δt = (ts.t_end - t)/2
+        t += ts.Δt
     else
-        t += ts.Δt[]
+        t += ts.Δt
     end
 
     return t, step
