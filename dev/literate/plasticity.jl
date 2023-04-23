@@ -195,10 +195,9 @@ end;
 
 # ## Solving the problem
 # First, we define a helper function to plot the results after the solution
-function plot_results(problem::PlasticityProblem; plt=plot(), label=nothing, markershape=:auto, markersize=4)
-    umax = vcat(0.0, problem.post.umax)
-    tmag = vcat(0.0, problem.post.tmag)
-    plot!(plt, umax, tmag, linewidth=0.5, title="Traction-displacement", label=label, 
+function plot_results(problem; plt=plot(), label, markershape, markersize=4)
+    plot!(plt, problem.post.umax, problem.post.tmag, 
+        linewidth=0.5, title="Traction-displacement", label=label, 
         markeralpha=0.75, markershape=markershape, markersize=markersize)
     ylabel!(plt, "Traction [Pa]")
     xlabel!(plt, "Maximum deflection [m]")
