@@ -120,7 +120,8 @@ end
     postprocess!(problem, step)
 
 Perform any postprocessing at the current time and step nr `step`
-Called after time step converged, and before `handle_converged!`.
+Called at the beginning of the simulation, 
+and after time step converged right before `handle_converged!`.
 One can choose which version to overload, i.e. if the solver should be 
 given or not. 
 """

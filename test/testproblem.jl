@@ -1,12 +1,13 @@
 using ForwardDiff, LinearAlgebra
 # Test problem
 #= 
-    | exp(t) - norm(x+1) |           | -norm(x .+ 1) |
-r = | cos(t) + x[1]      | = f(t) +  | x[1]          |
-    | x[3]^2 - x[2]      |           | x[3]^2-x[2]   |
+    | (exp(t)-1) - (norm(x+1)-1) |           | √3-norm(x .+ 1) |
+r = | (cos(t)-1) + x[1]          | = f(t) +  | x[1]            |
+    | x[3]^2 - x[2]              |           | x[3]^2-x[2]     |
 =#
 safenorm(x) = sqrt(sum(y->y^2+eps(y),x))    # Avoid NaN in derivative at x=0
-residual(x, f) = f + [-safenorm(x .+ 1); x[1]; x[3]^2-x[2]]
+residual(x, f) = f + [safenorm(ones(3))-safenorm(x .+ 1); x[1]; x[3]^2-x[2]]
+timefun(t) = [exp(t)-1; cos(t)-1; zero(t)]
 
 struct TestError <: Exception end
 
@@ -27,7 +28,7 @@ struct TestProblem{T,FT}
 end
 TestProblem(;throw_at_step=-1) = TestProblem(
     zeros(3), zeros(3), zeros(3,3), # x, r, drdx
-    t->[exp(t); cos(t); zero(t)],   # fun
+    timefun,                        # fun
     zeros(3), zeros(1),             # f, time
     Vector{Float64}[], Vector{Float64}[], Float64[], Int[], Bool[], throw_at_step
     )
