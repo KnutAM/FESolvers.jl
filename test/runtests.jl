@@ -19,7 +19,7 @@ include("test_timesteppers.jl")
     solver = QuasiStaticSolver(nlsolver=NewtonSolver(;tolerance=tol), timestepper=FixedTimeStepper(timehist))
     solve_problem!(problem, solver)    
     
-    @test problem.tv ≈ timehist[2:end]  # First time not postprocessed currently, should it?
+    @test problem.tv ≈ timehist
     @test length(problem.conv) == (length(timehist)-1)  # Check handle_converged calls
     @test all(norm.(problem.rv) .<= tol)                # Check that all steps converged
     # Check that saved solutions are indeed the same solutions
@@ -28,8 +28,9 @@ include("test_timesteppers.jl")
     problem = TestProblem(;throw_at_step=3)
     FESolvers.close_problem(p::TestProblem) = push!(p.steps, -1)
     @test_throws TestError solve_problem!(problem, solver)
-    @test length(problem.steps) == 2
-    @test last(problem.steps) == -1
+    @test length(problem.steps) == 3    # postprocess for TestProblem doesn't write when hitting "throw_at_step",
+                                        # but one step is added when close_problem is called. 
+    @test last(problem.steps) == -1     # (This tests that after throwing close_problem is still called)
 
     # Test the fully linear case 
     k = 1.0
@@ -43,6 +44,6 @@ include("test_timesteppers.jl")
     uend = ubc + 2*fend/k 
     @test p_linear.u[1] ≈ last(ubc)
     @test last(p_linear.u) ≈ last(p_linear.uend)
-    @test p_linear.uend ≈ uend[2:end]
+    @test p_linear.uend ≈ uend
     @test length(p_linear.conv) == length(timehist)-1
 end

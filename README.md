@@ -59,7 +59,7 @@ and the jacobian can be updated. Keep looping over the iterations until
 `calculate_convergence_measure` returns a sufficiently small value.
 
 ### After convergence
-The first thing that happens after convergence is that the user-defined function 
+The first thing that happens after convergence (also directly after calling `solve_problem`) is that the user-defined function 
 ```julia
 postprocess!(problem, step, [solver])   # Optional to define with or without solver
 ```

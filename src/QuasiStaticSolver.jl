@@ -36,6 +36,7 @@ function _solve_problem!(problem, solver::QuasiStaticSolver)
     step = 1
     converged = true
     xold = deepcopy(getunknowns(problem))
+    postprocess!(problem, step, solver)
     while !islaststep(solver.timestepper, t, step)
         t, step = update_time(solver, t, step, converged)
         update_to_next_step!(problem, t)
@@ -47,8 +48,6 @@ function _solve_problem!(problem, solver::QuasiStaticSolver)
         else
             # Reset unknowns if it didn't converge to 
             setunknowns!(problem, xold)
-            # TODO: ProgressMeter
-            println("the nonlinear solver didn't converge")
         end
     end
 end
