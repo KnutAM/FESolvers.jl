@@ -23,14 +23,17 @@ struct TestProblem{T,FT}
     xv::Vector{Vector{T}}
     tv::Vector{T}
     steps::Vector{Int}
+    niter::Vector{Int}
     conv::Vector{Bool}
+    # Custom things for testing
     throw_at_step::Int # Test if problems throws in postprocess
+    stiffness_factor::T # Scaling for stiffness (to slow down convergence)
 end
-TestProblem(;throw_at_step=-1) = TestProblem(
+TestProblem(;throw_at_step=-1, stiffness_factor=1.0) = TestProblem(
     zeros(3), zeros(3), zeros(3,3), # x, r, drdx
     timefun,                        # fun
     zeros(3), zeros(1),             # f, time
-    Vector{Float64}[], Vector{Float64}[], Float64[], Int[], Bool[], throw_at_step
+    Vector{Float64}[], Vector{Float64}[], Float64[], Int[], Int[], Bool[], throw_at_step, stiffness_factor
     )
 
 FESolvers.getunknowns(p::TestProblem) = p.x
@@ -45,16 +48,18 @@ function FESolvers.update_problem!(p::TestProblem, Δx; kwargs...)
     isnothing(Δx) || (p.x .+= Δx)
     p.r .= residual(p.x, p.f)
     p.drdx .= ForwardDiff.jacobian(x_->residual(x_, p.f), p.x)
+    p.drdx .*= p.stiffness_factor
 end
 
 FESolvers.calculate_convergence_measure(p::TestProblem, args...) = norm(p.r)
 FESolvers.handle_converged!(p::TestProblem) = push!(p.conv, true)
-function FESolvers.postprocess!(p::TestProblem, step)
+function FESolvers.postprocess!(p::TestProblem, step, solver)
     step == p.throw_at_step && throw(TestError())
     push!(p.xv, copy(p.x))
     push!(p.rv, copy(p.r))
     push!(p.tv, p.time[1])
     push!(p.steps, step)
+    push!(p.niter, FESolvers.getnumiter(solver.nlsolver))
 end
 
 struct LinearTestProblem{T,FF<:Function,DF<:Function}
