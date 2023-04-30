@@ -1,4 +1,4 @@
-function run_timestepper(solver, convergence_function)
+function run_timestepper(solver, convergence_function=Returns(true))
     t = FESolvers.initial_time(solver.timestepper)
     t_old = t
     step = 1

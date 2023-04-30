@@ -37,7 +37,7 @@ function _solve_problem!(problem, solver::QuasiStaticSolver)
     converged = true
     xold = deepcopy(getunknowns(problem))
     postprocess!(problem, step, solver)
-    while !islaststep(solver.timestepper, t, step)
+    while !(converged && islaststep(solver.timestepper, t, step))
         t, step = update_time(solver, t, step, converged)
         update_to_next_step!(problem, t)
         converged = solve_nonlinear!(problem, solver.nlsolver)

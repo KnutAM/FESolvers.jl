@@ -10,21 +10,38 @@ include("test_nlsolvers.jl")
 include("test_timesteppers.jl")
 
 @testset "QuasiStaticSolver.jl" begin
-    # Check order of nlsolver and timestepper to avoid unwanted API changes
-    @test QuasiStaticSolver(1,2).nlsolver == 1
-    
     tol = 1.e-6
     problem = TestProblem()
     timehist = [0.0, 1.0, 2.0, 3.0]
     solver = QuasiStaticSolver(nlsolver=NewtonSolver(;tolerance=tol), timestepper=FixedTimeStepper(timehist))
     solve_problem!(problem, solver)    
-    
+
     @test problem.tv ≈ timehist
     @test length(problem.conv) == (length(timehist)-1)  # Check handle_converged calls
     @test all(norm.(problem.rv) .<= tol)                # Check that all steps converged
     # Check that saved solutions are indeed the same solutions
     @test all(isapprox.(residual.(problem.xv, problem.fun.(problem.tv)), problem.rv))
 
+    x_sol = copy(FESolvers.getunknowns(problem))
+
+    # Check using low max iterations and adaptive time stepping
+    problem = TestProblem()
+    ts = AdaptiveTimeStepper(timehist[end], timehist[end]; Δt_min=0.1)
+    solver = QuasiStaticSolver(nlsolver=NewtonSolver(;tolerance=tol, maxiter=6), timestepper=ts)
+    solve_problem!(problem, solver)
+    @test length(problem.tv) > 2 # Just check that it actually didn't converge once, otherwise no point in test.
+    @test problem.tv[end] == timehist[end]
+    @test all(norm.(residual.(problem.xv, problem.fun.(problem.tv))) .<= tol)
+    @test x_sol ≈ FESolvers.getunknowns(problem) # Check final point is the same as for fixed time stepping
+
+    # Check using low max iterations and fixed time stepping to get no convergence
+    problem = TestProblem()
+    solver = QuasiStaticSolver(nlsolver=NewtonSolver(;tolerance=tol, maxiter=6), timestepper=FixedTimeStepper([0.0, 1e-3, timehist[end]]))
+    @test_throws FESolvers.ConvergenceError solve_problem!(problem, solver)
+    @test length(problem.tv) == 2 # Should work the first small time increase, but fail on the second. 
+
+    # Check that we can throw another error in postprocessing and that close_problem works as expected. 
+    solver = QuasiStaticSolver(nlsolver=NewtonSolver(;tolerance=tol), timestepper=FixedTimeStepper(timehist))
     problem = TestProblem(;throw_at_step=3)
     FESolvers.close_problem(p::TestProblem) = push!(p.steps, -1)
     @test_throws TestError solve_problem!(problem, solver)
