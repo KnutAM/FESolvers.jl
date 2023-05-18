@@ -1,7 +1,7 @@
 name = "FESolvers"
 uuid = "79314e9b-2e6f-4d6d-a72d-515aa2604984"
 authors = ["Knut Andreas Meyer and contributors"]
-version = "0.2.1"
+version = "0.2.2"
 
 [deps]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
