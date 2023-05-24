@@ -1,8 +1,11 @@
 """
-    solve_nonlinear!(problem, nlsolver)
+    solve_nonlinear!(problem, nlsolver, last_converged)
 
 Solve the current time step in the nonlinear `problem`, (`r(x) = 0`),
-by using the nonlinear solver: `nlsolver`. 
+by using the nonlinear solver `nlsolver`. `last_converged::Bool` 
+is just for information if the last time step converged or not. 
+In many cases it suffices to overload [`calculate_update!`](@ref) 
+for a custom nonlinear solver. 
 """
 function solve_nonlinear! end
 
@@ -54,31 +57,86 @@ reset its state at the beginning of each new time step.
 """
 reset_state!(::Any) = nothing
 
+"""
+    update_jac_initial(nlsolver)
+
+Should the jacobian be updated before starting to solve the problem?
+Defaults to `false` if not implemented
+"""
+update_jac_initial(::Any) = false
 
 """
-    NewtonSolver(;linsolver=BackslashSolver(), linesearch=NoLineSearch(), maxiter=10, tolerance=1.e-6)
+    update_jac_first(nlsolver)
 
-Use the standard NewtonRaphson solver to solve the nonlinear 
+Should the jacobian be updated before the first iteration of each time step?
+Defaults to `true` if not implemented
+"""
+update_jac_first(::Any) = true
+
+"""
+    update_jac_each(nlsolver)
+
+Should the jacobian be updated after each iteration?
+Defaults to `true` if not implemented
+"""
+update_jac_each(::Any) = true
+
+"""
+    NewtonSolver(;
+        linsolver=BackslashSolver(), linesearch=NoLineSearch(), 
+        maxiter=10, tolerance=1.e-6,
+        update_jac_first=true, update_jac_each=true)
+
+Use the standard Newton-Raphson solver to solve the nonlinear 
 problem r(x) = 0 with `tolerance` within the maximum number 
-of iterations `maxiter`. The `linsolver` argument determines the used linear solver
+of iterations `maxiter`. 
+
+## Quasi-Newton methods
+**Linesearch:** The `linsolver` argument determines the used linear solver
 whereas the `linesearch` can be set currently between `NoLineSearch` or
 `ArmijoGoldstein`. The latter globalizes the Newton strategy.
+
+**Jacobian updates: **
+The keyword `update_jac_first` decides if the jacobian from the previously converged
+time step should be updated after calling `update_to_next_step!`, or to use the old. 
+Setting `update_jac_each` implies that the jacobian will not be updated during the iterations.
+If both `update_jac_each` and `update_jac_first` are false, the initial jacobian will be used 
+throughout. Note that these keywords require that the problem respects the `update_jacobian`
+keyword given to `update_problem!`.
+For time-independent problems or time-depdent problems with 
+constant time steps, `update_jac_first=false` is often a good choice. 
+However, for time-dependent problems with changing time step length, 
+the standard solver (default), may work better. 
 """
 mutable struct NewtonSolver{LS,LSearch,T}
     const linsolver::LS
     const linesearch::LSearch
-    const maxiter::Int 
+    const maxiter::Int
     const tolerance::T
-    numiter::Int        # Last step number of iterations
+    const update_jac_first::Bool # Should jacobian be updated first iteration
+    const update_jac_each::Bool  # Should jacobian be updated each iteration
+    numiter::Int                # Last step number of iterations
     const residuals::Vector{T}  # Last step residual history
 end
 
-function NewtonSolver(;linsolver=BackslashSolver(), linesearch=NoLineSearch(), maxiter=10, tolerance=1.e-6)
+function NewtonSolver(;
+        linsolver=BackslashSolver(), linesearch=NoLineSearch(), 
+        maxiter=10, tolerance=1.e-6,
+        update_jac_first=true, update_jac_each=true
+    )
     residuals = zeros(typeof(tolerance), maxiter+1)
-    return NewtonSolver(linsolver, linesearch, maxiter, tolerance, 0, residuals)
+    return NewtonSolver(
+        linsolver, linesearch, 
+        maxiter, tolerance, 
+        update_jac_first, update_jac_each, 
+        0, residuals
+        )
 end
 getsystemmatrix(problem, ::NewtonSolver) = getjacobian(problem)
 
+update_jac_initial(nlsolver::NewtonSolver) = !(nlsolver.update_jac_first) 
+update_jac_first(nlsolver::NewtonSolver) = nlsolver.update_jac_first
+update_jac_each(nlsolver::NewtonSolver) = nlsolver.update_jac_each
 
 @doc raw"""
     SteepestDescent(;maxiter=10, tolerance=1.e-6)
@@ -88,7 +146,9 @@ problem r(x) = 0, which minimizes a potential \Pi with `tolerance`
 and the maximum number of iterations `maxiter`.
 
 This method is second derivative free and is not as locally limited as a Newton-Raphson scheme.
-Thus, it is especially suited for stronlgy nonlinear behavior with potentially vanishing tangent stiffnesses.
+Thus, it is especially suited for strongly nonlinear behavior with potentially vanishing tangent stiffnesses.
+For this method, it is required to implement [`getdescentpreconditioner`](@ref) or alternatively
+[`getsystemmatrix`](@ref) with `SteepestDescent`. 
 """
 Base.@kwdef mutable struct SteepestDescent{LineSearch,LinearSolver,T}
     const linsolver::LinearSolver = BackslashSolver()
@@ -99,7 +159,9 @@ Base.@kwdef mutable struct SteepestDescent{LineSearch,LinearSolver,T}
     const residuals::Vector{T} = zeros(typeof(tolerance),maxiter+1)  # Last step residual history
 end
 getsystemmatrix(problem, ::SteepestDescent) = getdescentpreconditioner(problem)
-
+update_jac_initial(::SteepestDescent) = false
+update_jac_first(::SteepestDescent) = false
+update_jac_each(::SteepestDescent) = false
 
 """
     getlinesearch(nlsolver)
@@ -122,15 +184,24 @@ function update_state!(s::Union{NewtonSolver,SteepestDescent}, r)
     s.residuals[s.numiter] = r 
 end
 
-function solve_nonlinear!(problem, nlsolver)
+function solve_nonlinear!(problem, nlsolver, last_converged)
     maxiter = getmaxiter(nlsolver)
     reset_state!(nlsolver)
-    update_problem!(problem, nothing; update_residual=true, update_jacobian=true)
+
+    if last_converged || update_jac_first(nlsolver)
+        update_problem!(problem, nothing; update_residual=true, update_jacobian=update_jac_first(nlsolver))
+    elseif update_jac_each(nlsolver) # If last step didn't converge and we updated the jacobian for each of those iterations, 
+         # we have no option than to update the jacobian to the new value
+        update_problem!(problem, nothing; update_residual=true, update_jacobian=true)
+    else # In this case, !update_jac_each(nlsolver) && !update_jac_first(nlsolver)
+        update_problem!(problem, nothing; update_residual=true, update_jacobian=false)
+    end
+
     Δa = zero(getunknowns(problem))
     for iter in 1:maxiter
         check_convergence_criteria(problem, nlsolver, Δa, iter) && return true
         calculate_update!(Δa, problem, nlsolver, iter)
-        update_problem!(problem, Δa; update_residual=true, update_jacobian=true)
+        update_problem!(problem, Δa; update_residual=true, update_jacobian=update_jac_each(nlsolver))
     end
     check_convergence_criteria(problem, nlsolver, Δa, maxiter+1) && return true
     return false
@@ -185,7 +256,7 @@ getnumiter(::LinearProblemSolver) = 0
 getmaxiter(::LinearProblemSolver) = 1
 gettolerance(::LinearProblemSolver) = NaN
 
-function solve_nonlinear!(problem, nlsolver::LinearProblemSolver)
+function solve_nonlinear!(problem, nlsolver::LinearProblemSolver, last_converged)
     update_problem!(problem, nothing; update_residual=true, update_jacobian=true)
     r = getresidual(problem)
     K = getsystemmatrix(problem,nlsolver)

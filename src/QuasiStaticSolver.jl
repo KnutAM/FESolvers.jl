@@ -32,15 +32,20 @@ function solve_problem!(problem, solver)
 end
 
 function _solve_problem!(problem, solver::QuasiStaticSolver)
-    t = initial_time(solver.timestepper)
+    nlsolver = getnlsolver(solver)
+    timestepper = gettimestepper(solver)
+    t = initial_time(timestepper)
     step = 1
     converged = true
     xold = deepcopy(getunknowns(problem))
+    if update_jac_initial(nlsolver)
+        update_problem!(problem, nothing; update_jacobian=true, update_residual=false)
+    end
     postprocess!(problem, step, solver)
-    while !(converged && islaststep(solver.timestepper, t, step))
+    while !(converged && islaststep(timestepper, t, step))
         t, step = update_time(solver, t, step, converged)
         update_to_next_step!(problem, t)
-        converged = solve_nonlinear!(problem, solver.nlsolver)
+        converged = solve_nonlinear!(problem, nlsolver, converged)
         if converged
             copy!(xold, getunknowns(problem))
             postprocess!(problem, step, solver)

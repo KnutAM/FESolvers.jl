@@ -117,11 +117,11 @@ FESolvers.getresidual(p::Rosenbrock) = p.r
 FESolvers.getsystemmatrix(p::Rosenbrock, ::NewtonSolver) = p.drdx
 FESolvers.getjacobian(p::Rosenbrock) = p.drdx # For TestNLSolver 
 FESolvers.calculate_energy(p::Rosenbrock,x) = 100*(x[2] - x[1]^2)^2 + (1-x[1])^2
-function FESolvers.update_problem!(p::Rosenbrock, Δx; kwargs...)
+function FESolvers.update_problem!(p::Rosenbrock, Δx; update_jacobian=true, update_residual=true)
     isnothing(Δx) || (p.x .+= Δx)
     dfdx = ForwardDiff.gradient(x_->FESolvers.calculate_energy(p,x_),p.x)
     d²fdxdx = ForwardDiff.hessian(x_->FESolvers.calculate_energy(p,x_),p.x)
-    p.r .= dfdx
-    p.drdx .= d²fdxdx
+    update_residual && (p.r .= dfdx)
+    update_jacobian && (p.drdx .= d²fdxdx)
 end
 FESolvers.calculate_convergence_measure(p::Rosenbrock, args...) = norm(p.r)
