@@ -87,21 +87,26 @@ update_jac_each(::Any) = true
         maxiter=10, tolerance=1.e-6,
         update_jac_first=true, update_jac_each=true)
 
-Use the standard NewtonRaphson solver to solve the nonlinear 
+Use the standard Newton-Raphson solver to solve the nonlinear 
 problem r(x) = 0 with `tolerance` within the maximum number 
-of iterations `maxiter`. The `linsolver` argument determines the used linear solver
+of iterations `maxiter`. 
+
+## Quasi-Newton methods
+**Linesearch:** The `linsolver` argument determines the used linear solver
 whereas the `linesearch` can be set currently between `NoLineSearch` or
 `ArmijoGoldstein`. The latter globalizes the Newton strategy.
 
+**Jacobian updates: **
 The keyword `update_jac_first` decides if the jacobian from the previously converged
 time step should be updated after calling `update_to_next_step!`, or to use the old. 
 Setting `update_jac_each` implies that the jacobian will not be updated during the iterations.
 If both `update_jac_each` and `update_jac_first` are false, the initial jacobian will be used 
 throughout. Note that these keywords require that the problem respects the `update_jacobian`
-keyword given to `update_problem!`. For time-independent problems or time-depdent problems with 
+keyword given to `update_problem!`.
+For time-independent problems or time-depdent problems with 
 constant time steps, `update_jac_first=false` is often a good choice. 
 However, for time-dependent problems with changing time step length, 
-especially without changing prescribed values, the default option should be better. 
+the standard solver (default), may work better. 
 """
 mutable struct NewtonSolver{LS,LSearch,T}
     const linsolver::LS
@@ -142,6 +147,8 @@ and the maximum number of iterations `maxiter`.
 
 This method is second derivative free and is not as locally limited as a Newton-Raphson scheme.
 Thus, it is especially suited for strongly nonlinear behavior with potentially vanishing tangent stiffnesses.
+For this method, it is required to implement [`getdescentpreconditioner`](@ref) or alternatively
+[`getsystemmatrix`](@ref) with `SteepestDescent`. 
 """
 Base.@kwdef mutable struct SteepestDescent{LineSearch,LinearSolver,T}
     const linsolver::LinearSolver = BackslashSolver()
