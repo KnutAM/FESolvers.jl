@@ -19,7 +19,13 @@ abstract type FESolver end
 include("problem.jl")
 include("linearsolvers.jl")
 include("linesearchers.jl")
+
 include("nlsolvers.jl")
+include("nlsolvers/Newton.jl")
+include("nlsolvers/SteepestDescent.jl")
+include("nlsolvers/AdaptiveNewton.jl")
+include("nlsolvers/LinearProblemSolver.jl")
+
 include("timesteppers.jl")
 include("QuasiStaticSolver.jl")
 

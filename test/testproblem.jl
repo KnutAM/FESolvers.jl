@@ -104,24 +104,31 @@ FESolvers.postprocess!(p::LinearTestProblem, step) = push!(p.uend, last(p.u))
 
 
 # Test case for nonlinear solvers
-struct Rosenbrock{T}
-    x::Vector{T}
-    r::Vector{T}
-    drdx::Matrix{T}
+@kwdef struct Rosenbrock{T}
+    a::T=1.0
+    b::T=100.0
+    x::Vector{T}=[0.5*a, 0.5*a^2] # minimum at [a,a^2]
+    r::Vector{T}=similar(x)
+    drdx::Matrix{T}=zeros(eltype(x), length(x), length(x))
 end
-
-Rosenbrock() = Rosenbrock([-1.0,1.0], zeros(2), zeros(2,2))
 
 FESolvers.getunknowns(p::Rosenbrock) = p.x
 FESolvers.getresidual(p::Rosenbrock) = p.r
 FESolvers.getsystemmatrix(p::Rosenbrock, ::NewtonSolver) = p.drdx
 FESolvers.getjacobian(p::Rosenbrock) = p.drdx # For TestNLSolver 
-FESolvers.calculate_energy(p::Rosenbrock,x) = 100*(x[2] - x[1]^2)^2 + (1-x[1])^2
-function FESolvers.update_problem!(p::Rosenbrock, Δx; update_jacobian=true, update_residual=true)
+FESolvers.calculate_energy(p::Rosenbrock,x) = p.b*(x[2] - x[1]^2)^2 + (p.a-x[1])^2
+
+function FESolvers.update_problem!(p::Rosenbrock, Δx, update_spec)
     isnothing(Δx) || (p.x .+= Δx)
-    dfdx = ForwardDiff.gradient(x_->FESolvers.calculate_energy(p,x_),p.x)
-    d²fdxdx = ForwardDiff.hessian(x_->FESolvers.calculate_energy(p,x_),p.x)
-    update_residual && (p.r .= dfdx)
-    update_jacobian && (p.drdx .= d²fdxdx)
+    if FESolvers.should_update_residual(update_spec)
+        p.r .= ForwardDiff.gradient(x_->FESolvers.calculate_energy(p,x_),p.x)
+    end
+    if FESolvers.should_update_jacobian(update_spec)
+        if FESolvers.get_update_type(update_spec) == :steepestdescent
+            copyto!(p.drdx, FESolvers.getdescentpreconditioner(p))
+        else
+            p.drdx .= ForwardDiff.hessian(x_->FESolvers.calculate_energy(p,x_),p.x)
+        end
+    end
 end
 FESolvers.calculate_convergence_measure(p::Rosenbrock, args...) = norm(p.r)

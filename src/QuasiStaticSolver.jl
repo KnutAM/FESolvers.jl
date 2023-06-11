@@ -32,16 +32,23 @@ function solve_problem!(problem, solver)
 end
 
 function _solve_problem!(problem, solver::QuasiStaticSolver)
+    # Setup 
     nlsolver = getnlsolver(solver)
     timestepper = gettimestepper(solver)
     t = initial_time(timestepper)
     step = 1
     converged = true
     xold = deepcopy(getunknowns(problem))
-    if update_jac_initial(nlsolver)
-        update_problem!(problem, nothing; update_jacobian=true, update_residual=false)
+    
+    # Initial update of stiffness (or residual) if requested by the nlsolver
+    if do_initial_update(nlsolver)
+        update_problem!(problem, nothing, get_initial_update_spec(nlsolver))
     end
+
+    # Initial postprocessing (to save initial conditions)
     postprocess!(problem, step, solver)
+
+    # Main time-stepping loop
     while !(converged && islaststep(timestepper, t, step))
         t, step = update_time(solver, t, step, converged)
         update_to_next_step!(problem, t)

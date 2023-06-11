@@ -65,8 +65,15 @@ time than the previous time if the solution did not converge.
 function update_to_next_step! end
 
 """
-    update_problem!(problem, Δx; update_residual::Bool, update_jacobian::Bool)
+    update_problem!(problem, Δx, update_spec::UpdateSpec)
 
+The `update_spec` gives the information about what and how to update.
+See the documentation for [`UpdateSpec`](@ref) for further details. 
+A simplified interface is called by default to perserve backwards compatibility,
+but it is recommended to use the new interface. 
+
+    update_problem!(problem, Δx; update_residual::Bool, update_jacobian::Bool)
+    
 Update the unknowns, `x += Δx`, if `!isnothing(Δx)`, and in any case
 * Assemble the residual if `update_residual=true`
 * Assemble the jacobian if `update_jacobian=true`
@@ -111,7 +118,7 @@ measure if applicable.
 """
 function check_convergence_criteria(problem, nlsolver, Δa, iter)
     r = calculate_convergence_measure(problem, Δa, iter)
-    update_state!(nlsolver, r)
+    update_state!(nlsolver, problem, r)
     return r < gettolerance(nlsolver)
 end
 
