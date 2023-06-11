@@ -1,4 +1,5 @@
 module FESolvers
+import Base: @kwdef # To support julia < 1.9
 import LinearAlgebra
 using Requires
 export solve_problem!
