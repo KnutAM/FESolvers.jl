@@ -18,7 +18,6 @@ FESolvers.postprocess!
 FESolvers.close_problem
 ```
 
-
 ## Simple API
 ```@docs
 FESolvers.calculate_convergence_measure

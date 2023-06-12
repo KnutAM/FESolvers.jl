@@ -44,7 +44,7 @@ function FESolvers.update_to_next_step!(p::TestProblem, time)
     p.time[1] = time
 end
 
-function FESolvers.update_problem!(p::TestProblem, Δx; kwargs...)
+function FESolvers.update_problem!(p::TestProblem, Δx, _)
     isnothing(Δx) || (p.x .+= Δx)
     p.r .= residual(p.x, p.f)
     p.drdx .= ForwardDiff.jacobian(x_->residual(x_, p.f), p.x)
@@ -89,10 +89,10 @@ function FESolvers.update_to_next_step!(p::LinearTestProblem, time)
     p.r[end]=-p.forcefun(time)
     p.u[1] = p.dbcfun(time)
 end
-function FESolvers.update_problem!(p::LinearTestProblem, Δu; update_jacobian, update_residual)
+function FESolvers.update_problem!(p::LinearTestProblem, Δu, update_spec)
     isnothing(Δu) || (p.u .+= Δu)
-    update_residual && (p.r .+= p.K0*p.u; p.r[1]=0)
-    if update_jacobian
+    FESolvers.should_update_residual(update_spec) && (p.r .+= p.K0*p.u; p.r[1]=0)
+    if FESolvers.should_update_jacobian(update_spec)
         p.K .= p.K0
         # "apply_zero!"
         p.K[:,1] .= 0; p.K[1,:] .= 0; p.K[1,1] = p.K0[1,1]
