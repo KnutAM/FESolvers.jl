@@ -1,3 +1,16 @@
+"""
+    AdaptiveNewtonSolver(;
+        update_types, switch_criterion,
+        linsolver=BackslashSolver(), linesearch=NoLineSearch(),
+        maxiter=10, tolerance=1e-6, update_jac_first=true)
+
+Define an adaptive newton solver, where the update type 
+(given to [`UpdateSpec`](@ref FESolvers.UpdateSpec))
+changes during the iterations. The different options 
+are given to `update_types`, and the criterion to switch 
+between them is given to `switch_criterion`. Remaining options
+are similar to the standard newton solver. 
+"""
 Base.@kwdef mutable struct AdaptiveNewtonSolver{LinearSolver,LineSearch,T,UT,SC}
     const linsolver::LinearSolver = BackslashSolver()
     const linesearch::LineSearch = NoLineSearch()
@@ -59,6 +72,17 @@ function maybe_reset_problem!(problem, Δa, s::AdaptiveNewtonSolver)
         update_problem!(problem, Δa, get_update_spec(s))
     end
 end
+
+"""
+    switch_information(switch_criterion, nlsolver)
+
+Create a custom `switch_criterion` by overloading this function,
+which given the defined `switch_criterion` and the `nlsolver`,
+should return `reset_problem::Bool` and `new_nr::Int`, which 
+determines if the problem should be reset to the state before its 
+last update and which update_type should be used next, respectively.
+"""
+function switch_information end
 
 # Implemented switches
 """

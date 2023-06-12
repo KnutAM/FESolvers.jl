@@ -38,7 +38,13 @@ Solve a given user `problem` using the chosen `solver`
 For details on the functions that should be defined for `problem`,
 see [User problem](@ref)
 """
-function solve_problem! end
+function solve_problem!(problem, solver)
+    try
+        _solve_problem!(problem, solver)
+    finally
+        close_problem(problem)
+    end
+end
 
 function __init__()
     @require(

@@ -23,7 +23,7 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
-        "Manual" => ["solvers.md",
+        "Manual" => [#"solvers.md",
                      "userfunctions.md",
                      "nlsolvers.md",
                      "timesteppers.md",
