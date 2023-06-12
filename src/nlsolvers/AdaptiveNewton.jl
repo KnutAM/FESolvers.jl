@@ -33,8 +33,8 @@ end
 function get_first_update_spec(nls::AdaptiveNewtonSolver, last_converged::Bool)
     if last_converged
         return UpdateSpec(jacobian=nls.update_jac_first, residual=true, type=_get_update_type(nls))
-    else # We must update if jacobian was updated for each
-        return UpdateSpec(jacobian=nls.update_jac_each, residual=true, type=_get_update_type(nls))
+    else # We must update since jacobian when it didn't converge
+        return UpdateSpec(jacobian=true, residual=true, type=_get_update_type(nls))
     end
 end
 function get_update_spec(nls::AdaptiveNewtonSolver)
