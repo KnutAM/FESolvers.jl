@@ -1,5 +1,6 @@
 using FESolvers
 using Test
+import Base: @kwdef
 
 include("testproblem.jl")
 include("TestNLSolver.jl")
