@@ -77,6 +77,14 @@ FESolvers.getmaxiter(::Nothing) = 4
         # Last two steps should take half each when the reminder is less then Δt_min
         @test Δth[end] ≈ Δth[end-1] ≈ (mod(t_end, Δt) + Δt)/2
         @test all(Δth[1:end-2] .≈ 0.1)
+
+        # Test errors
+        Δt = 0.1
+        ts = AdaptiveTimeStepper(Δt, 3*Δt; Δt_min=Δt)
+        # Not converged in first iteration (setup issue)
+        @test_throws ArgumentError FESolvers.update_time(ts, nothing, 0.0, #=step=# 1, #=converged=# false)
+        # Cannot reduce time step further
+        @test_throws FESolvers.ConvergenceError FESolvers.update_time(ts, nothing, Δt, 2, false)
     end
 
 end
