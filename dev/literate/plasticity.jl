@@ -162,7 +162,7 @@ end;
 # Note that we use `Δu::Nothing` for the case it is not given, to signal no change.
 # This version is called directly after update_to_next_step! before entering 
 # the nonlinear iterations. 
-function FESolvers.update_problem!(p::PlasticityProblem, Δu; kwargs...)
+function FESolvers.update_problem!(p::PlasticityProblem, Δu, _)
     buf = p.buf 
     def = p.def
     if !isnothing(Δu)

@@ -113,14 +113,14 @@ function FESolvers.update_to_next_step!(p::TransientHeat, time)
     apply!(FESolvers.getunknowns(p), p.def.ch)
 end
 
-function FESolvers.update_problem!(p::TransientHeat, Δu; update_jacobian, update_residual)
+function FESolvers.update_problem!(p::TransientHeat, Δu, update_spec)
     if !isnothing(Δu)
         apply_zero!(Δu, p.def.ch)
         p.buf.u .+= Δu
     end
     # Since the problem is linear, we can save some computations by only updating once per time step
     # and not after updating the temperatures to check that it has converged.
-    if update_jacobian || update_residual
+    if FESolvers.should_update_jacobian(update_spec) || FESolvers.should_update_residual(update_spec)
         Δt = p.buf.times[2]-p.buf.times[1]
         doassemble!(p.buf.K, p.buf.r, p.def.cv, p.def.dh, FESolvers.getunknowns(p), p.buf.uold, Δt)
         apply_zero!(FESolvers.getjacobian(p), FESolvers.getresidual(p), p.def.ch)

@@ -118,7 +118,7 @@ function FESolvers.update_to_next_step!(p::PlasticityProblem, time)
     update!(p.def.ch, time) # No influence in this particular example
 end;
 
-function FESolvers.update_problem!(p::PlasticityProblem, Δu; kwargs...)
+function FESolvers.update_problem!(p::PlasticityProblem, Δu, _)
     buf = p.buf
     def = p.def
     if !isnothing(Δu)
