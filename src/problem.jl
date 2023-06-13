@@ -65,25 +65,35 @@ time than the previous time if the solution did not converge.
 function update_to_next_step! end
 
 """
-    update_problem!(problem, Δx; update_residual::Bool, update_jacobian::Bool)
+    update_problem!(problem, Δx, update_spec::UpdateSpec)
 
-Update the unknowns, `x += Δx`, if `!isnothing(Δx)`, and in any case
-* Assemble the residual if `update_residual=true`
-* Assemble the jacobian if `update_jacobian=true`
-
-Note that one can also update the residual and jacobian if any of the kwargs 
-are false, the kwargs just states if an update is required. 
-A simple function overload that doesn't account for the kwargs is
-```julia
-FESolvers.update_problem!(problem, Δx; kwargs...)
-```
-
+Update the unknowns of the problem by `Δx` according to `update_spec`.
+Note that 
 - Some linear solvers may be inaccurate, and if a modified stiffness is used 
   to enforce constraints on `x`, it is good the force `Δx=0` on these
   components inside this function. 
 - `Δx=nothing` in the first call after [`update_to_next_step!`](@ref)
   in which case, typically, no change of `x` should be made. Dirichlet
   boundary conditions are typically updated in `update_to_next_step!`.
+
+The `update_spec` gives the information about what and how to update.
+See the documentation for [`UpdateSpec`](@ref) for further details. 
+This feature is used by some nonlinear solvers to customize the iteration 
+strategy to speed up or aid convergence. For basic cases when getting started, 
+this can be ignored and a simple function definition would be 
+```julia
+FESolvers.update_problem!(problem, Δx, _)
+```
+
+
+    update_problem!(problem, Δx; update_residual::Bool, update_jacobian::Bool)
+
+The old but now deprecated interface is still available without `update_spec`.
+The instructions are here:
+
+* Assemble the residual if `update_residual=true`
+* Assemble the jacobian if `update_jacobian=true`
+
 """
 function update_problem! end
 
@@ -98,7 +108,6 @@ where `ch::Ferrite.ConstraintHandler`. `Δa` is the update of the unknowns from
 the previous iteration. Note that `iter=1` implies `Δa=0`
 
 The advanced API alternative is [`check_convergence_criteria`](@ref)
-
 """
 function calculate_convergence_measure end
 
@@ -106,27 +115,24 @@ function calculate_convergence_measure end
     check_convergence_criteria(problem, nlsolver, Δa, iter) -> Bool
 
 Check if `problem` has converged and update the state 
-of `nlsolver` wrt. number of iterations and a convergence
-measure if applicable.
+of `nlsolver`, see [`FESolvers.update_state!`](@ref).
 """
 function check_convergence_criteria(problem, nlsolver, Δa, iter)
     r = calculate_convergence_measure(problem, Δa, iter)
-    update_state!(nlsolver, r)
+    update_state!(nlsolver, problem, r)
     return r < gettolerance(nlsolver)
 end
 
 """
     postprocess!(problem, step, solver)
-    postprocess!(problem, step)
 
 Perform any postprocessing at the current time and step nr `step`
 Called at the beginning of the simulation, 
 and after time step converged right before `handle_converged!`.
-One can choose which version to overload, i.e. if the solver should be 
-given or not. 
 """
 function postprocess! end
-postprocess!(problem, step, solver) = postprocess!(problem, step)
+# The 2-argument (problem, step) version should be removed. Leave undocumented for now
+postprocess!(problem, step, solver) = postprocess!(problem, step) 
 postprocess!(args...) = nothing
 
 """

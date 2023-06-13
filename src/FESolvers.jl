@@ -1,4 +1,5 @@
 module FESolvers
+import Base: @kwdef # To support julia < 1.9
 import LinearAlgebra
 using Requires
 export solve_problem!
@@ -19,7 +20,13 @@ abstract type FESolver end
 include("problem.jl")
 include("linearsolvers.jl")
 include("linesearchers.jl")
+
 include("nlsolvers.jl")
+include("nlsolvers/Newton.jl")
+include("nlsolvers/SteepestDescent.jl")
+include("nlsolvers/AdaptiveNewton.jl")
+include("nlsolvers/LinearProblemSolver.jl")
+
 include("timesteppers.jl")
 include("QuasiStaticSolver.jl")
 
@@ -31,7 +38,13 @@ Solve a given user `problem` using the chosen `solver`
 For details on the functions that should be defined for `problem`,
 see [User problem](@ref)
 """
-function solve_problem! end
+function solve_problem!(problem, solver)
+    try
+        _solve_problem!(problem, solver)
+    finally
+        close_problem(problem)
+    end
+end
 
 function __init__()
     @require(

@@ -1,6 +1,21 @@
 abstract type AbstractLineSearch end
-"Singleton that does not perform a linesearch when used in a nonlinear solver"
+
+"""
+    linesearch!(Δx, problem, ls::AbstractLineSearch)
+
+Search along `Δx` to find the minimum of the potential. 
+Return the modified `Δx`.
+"""
+function linesearch! end
+
+"""
+    NoLineSearch()
+
+Singleton that does not perform a linesearch when used in a nonlinear solver
+"""
 struct NoLineSearch <: AbstractLineSearch end
+
+linesearch!(_, _, ::NoLineSearch) = nothing
 
 @doc raw"""
     Armijo-Goldstein{T}(;β=0.9,μ=0.01,τ0=1.0,τmin=1e-4)
@@ -10,7 +25,7 @@ Backtracking line search based on the Armijo-Goldstein condition
 \Pi(\boldsymbol{u} + \tau \Delta\boldsymbol{u}) \leq \Pi(\boldsymbol{u}) - \mu\tau\delta\Pi(\boldsymbol{u})[\Delta \boldsymbol{u}]
 ```
 
-where \$\Pi\$ is the potential, \$\tau\$ the stepsize, and \$\delta\Pi\$ the residuum.
+where ``\Pi`` is the potential, ``\tau`` the stepsize, and ``\delta\Pi`` the residuum.
 
 #Fields
 - `β::T = 0.9` constant factor that changes the steplength τ in each iteration
@@ -25,8 +40,6 @@ Base.@kwdef struct ArmijoGoldstein{T} <: AbstractLineSearch
     τmin::T = 1e-5
 end
 
-linesearch!(searchdirection, problem, ls::NoLineSearch) = nothing
-
 function linesearch!(searchdirection, problem, ls::ArmijoGoldstein)
     τ = ls.τ0; μ = ls.μ; β = ls.β
     𝐮 = getunknowns(problem)
@@ -34,7 +47,6 @@ function linesearch!(searchdirection, problem, ls::ArmijoGoldstein)
     δΠ₀ = getresidual(problem)
     Πₐ = calculate_energy(problem,𝐮 .+ τ .* searchdirection)
     armijo = Πₐ - Π₀ - μ * τ * δΠ₀'searchdirection
-    
     while armijo > 0 && !isapprox(armijo,0.0,atol=1e-8)
         τ *= β
         Πₐ = calculate_energy(problem,𝐮 .+ τ .* searchdirection)

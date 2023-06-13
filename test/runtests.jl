@@ -1,5 +1,6 @@
 using FESolvers
 using Test
+import Base: @kwdef
 
 include("testproblem.jl")
 include("TestNLSolver.jl")
@@ -63,4 +64,15 @@ include("test_timesteppers.jl")
     @test last(p_linear.u) ≈ last(p_linear.uend)
     @test p_linear.uend ≈ uend
     @test length(p_linear.conv) == length(timehist)-1
+
+    # Smoke-test the access function for the linear nlsolver
+    lps = s_linear.nlsolver
+    @test FESolvers.getnumiter(lps) == 0
+    @test FESolvers.getmaxiter(lps) == 1
+    @test isnan(FESolvers.gettolerance(lps))
+    @test isnan(FESolvers.get_convergence_measures(lps, 1))
+    @test all(isnan, FESolvers.get_convergence_measures(lps))
+    @test all(isnan, FESolvers.get_convergence_measures(lps, 1:2))
+    @test_throws BoundsError FESolvers.get_convergence_measures(lps, 1:3)
 end
+# =#

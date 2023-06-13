@@ -14,34 +14,24 @@ QuasiStaticSolver(;nlsolver, timestepper) = QuasiStaticSolver(nlsolver, timestep
 getnlsolver(s::QuasiStaticSolver) = s.nlsolver
 gettimestepper(s::QuasiStaticSolver) = s.timestepper
 
-"""
-    solve_problem!(problem, solver)
-
-Solve a time-dependent problem `r(x(t),t)=0` for `x(t)`, 
-stepping throught the time `t`, using the `solver`.
-
-For details on the functions that should be defined for `problem`,
-see [User problem](@ref)
-"""
-function solve_problem!(problem, solver)
-    try
-        _solve_problem!(problem, solver)
-    finally
-        close_problem(problem)
-    end
-end
-
 function _solve_problem!(problem, solver::QuasiStaticSolver)
+    # Setup 
     nlsolver = getnlsolver(solver)
     timestepper = gettimestepper(solver)
     t = initial_time(timestepper)
     step = 1
     converged = true
     xold = deepcopy(getunknowns(problem))
-    if update_jac_initial(nlsolver)
-        update_problem!(problem, nothing; update_jacobian=true, update_residual=false)
+    
+    # Initial update of stiffness (or residual) if requested by the nlsolver
+    if do_initial_update(nlsolver)
+        update_problem!(problem, nothing, get_initial_update_spec(nlsolver))
     end
+
+    # Initial postprocessing (to save initial conditions)
     postprocess!(problem, step, solver)
+
+    # Main time-stepping loop
     while !(converged && islaststep(timestepper, t, step))
         t, step = update_time(solver, t, step, converged)
         update_to_next_step!(problem, t)

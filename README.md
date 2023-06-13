@@ -15,7 +15,7 @@ the following `get*` functions
 ```julia
 x = getunknowns(problem)
 r = getresidual(problem)
-K = getjacobian(problem)    # ∂r/∂x
+K = getjacobian(problem)    # ∂r/∂x (or an approximation thereof)
 ```
 must be defined.
 
@@ -36,10 +36,9 @@ update_to_next_step!(problem, t)
 is called to update boundary conditions and other time-dependent items to `t`.
 Thereafter, the user-defined function
 ```julia 
-update_problem!(problem, nothing; update_residual::Bool, update_jacobian::Bool)
+update_problem!(problem, nothing, update_spec)
 ```
-is called. If requested by the boolean kwargs, the corresponding items should be updated 
-(Newton's method always requests these to be updated) following the updated boundary conditions. 
+is called. If requested by update_spec, the residual and/or jacobian should be updated. 
 Then starts the iterations to find the new value of the unknowns, `x`.
 ### Iterations
 First, the residual is checked by calling the user-defined function
@@ -50,12 +49,12 @@ where the user defines `calculate_convergence_measure`. If `false`, then
 continue by calculating the update, `Δx=-[∂r/∂x]\r` using
 the linear solver given to `nlsolver`. 
 
-Then, call once more 
+Then, 
 ```julia 
-update_problem!(problem, Δx; update_residual::Bool, update_jacobian::Bool)
+update_problem!(problem, Δx, update_spec)
 ```
-but this time with the update `Δx` such that the unknowns, `x`, the residual, 
-and the jacobian can be updated. Keep looping over the iterations until
+is called once more, but this time with the update `Δx` such that the unknowns, `x`, 
+the residual, and the jacobian can be updated. Keep looping over the iterations until
 `calculate_convergence_measure` returns a sufficiently small value.
 
 ### After convergence
@@ -83,11 +82,11 @@ is called. This allows closing any open files etc.
 ```julia
 x = getunknowns(problem)
 r = getresidual(problem)
-K = getjacobian(problem)                # K = ∂r/∂x
-update_to_next_step!(problem, t)        # Update boundary conditions etc. for a new time step
-update_problem!(problem, Δx; kwargs...) # Assemble stiffness and residual for x+=Δx 
-calculate_convergence_criterion(problem)# Get a scalar value to compare with the iteration tolerance
-postprocess!(problem, step)             # Do all postprocessing for current step (after convergence)
-handle_converged!(problem, t)           # Do stuff if required after the current time step has converged. 
-close_problem(problem)                  # Close any open file streams etc. Called in a `finally` block. 
+K = getjacobian(problem)                  # K = ∂r/∂x (or an approximation thereof)
+update_to_next_step!(problem, t)          # Update boundary conditions etc. for a new time step
+update_problem!(problem, Δx, update_spec) # Assemble stiffness and residual for x+=Δx 
+calculate_convergence_criterion(problem)  # Get a scalar value to compare with the iteration tolerance
+postprocess!(problem, step)               # Do all postprocessing for current step (after convergence)
+handle_converged!(problem, t)             # Do stuff if required after the current time step has converged. 
+close_problem(problem)                    # Close any open file streams etc. Called in a `finally` block. 
 ```
