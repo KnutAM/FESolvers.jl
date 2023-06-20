@@ -37,20 +37,32 @@ default [`calculate_update!`](@ref FESolvers.calculate_update!).
 
 All nonlinear solvers are expected to implement the following methods,
 ```@docs
-FESolvers.getmaxiter
-FESolvers.getnumiter
-FESolvers.get_convergence_measures
-FESolvers.gettolerance
+FESolvers.get_max_iter
+FESolvers.get_tolerance
 FESolvers.get_initial_update_spec
+FESolvers.get_solver_state
+FESolvers.update_solver_state!
+FESolvers.reset_solver_state!
 ```
 
-After implementing these, one can either implement `solve_nonlinear!`,
+### `get_solver_state`
+If `get_solver_state` is not implemented, the following methods
+must be implemented instead
+```@docs
+FESolvers.is_converged
+FESolvers.get_num_iter
+FESolvers.get_convergence_measure
+```
+
+
+
+### Methods required by `solve_nonlinear!`
+After implementing the methods above, one can either implement `solve_nonlinear!`,
 or a set of method described below to use the default implementation.
 ```@docs
 FESolvers.solve_nonlinear!
 ```
 
-### Methods required by `solve_nonlinear!`
 To use the default implementation of `solve_nonlinear!`,
 [`calculate_update!`](@ref FESolvers.calculate_update!) and the other methods in the
 list below must be implemented for the specific nonlinear solver. 
@@ -58,11 +70,9 @@ The default implementation of `calculate_update!` may be used as well,
 see the description below.
 ```@docs
 FESolvers.calculate_update!
-FESolvers.update_state!
-FESolvers.reset_state!
 FESolvers.get_first_update_spec
 FESolvers.get_update_spec
-FESolvers.maybe_reset_problem!
+FESolvers.should_reset_problem
 ```
 
 ### Methods required by `calculate_update!`
@@ -75,7 +85,8 @@ FESolvers.get_linesearch
 
 ### Additional methods that usually don't require specialization
 ```@docs
-FESolvers.do_initial_update
+FESolvers.should_do_initial_update
+FESolvers.reset_problem!
 ```
 
 # Linesearch

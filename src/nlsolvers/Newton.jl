@@ -25,21 +25,20 @@ constant time steps, `update_jac_first=false` is often a good choice.
 However, for time-dependent problems with changing time step length, 
 the standard solver (default), may work better. 
 """
-Base.@kwdef mutable struct NewtonSolver{LinearSolver,LineSearch,T}
+Base.@kwdef mutable struct NewtonSolver{LinearSolver,LineSearch,T,SS}
     const linsolver::LinearSolver = BackslashSolver()
     const linesearch::LineSearch = NoLineSearch()
     const maxiter::Int = 10
     const tolerance::T = 1e-6
     const update_jac_first::Bool=true # Should jacobian be updated first iteration
     const update_jac_each::Bool=true  # Should jacobian be updated each iteration
-    numiter::Int = 0  # Current number of iterations (reset at beginning of new iteration)
-    const residuals::Vector{T} = zeros(typeof(tolerance),maxiter+1)  # Last step residual history
+    const state::SS=SolverState(maxiter)
 end
 getsystemmatrix(problem, ::NewtonSolver) = getjacobian(problem)
 
 get_initial_update_spec(nlsolver::NewtonSolver) = UpdateSpec(jacobian=!(nlsolver.update_jac_first), residual=false)
-function get_first_update_spec(nlsolver::NewtonSolver, last_converged::Bool)
-    if last_converged
+function get_first_update_spec(nlsolver::NewtonSolver)
+    if is_converged(nlsolver)
         return UpdateSpec(jacobian=nlsolver.update_jac_first, residual=true)
     else # We must update if jacobian was updated for each
         return UpdateSpec(jacobian=nlsolver.update_jac_each, residual=true)
@@ -52,18 +51,6 @@ end
 get_linesearch(nlsolver::NewtonSolver) = nlsolver.linesearch
 get_linear_solver(nlsolver::NewtonSolver) = nlsolver.linsolver
 
-getmaxiter(nlsolver::NewtonSolver) = nlsolver.maxiter
-gettolerance(nlsolver::NewtonSolver) = nlsolver.tolerance
-getnumiter(s::NewtonSolver) = s.numiter
-get_convergence_measures(s::NewtonSolver, inds=1:getnumiter(s)) = s.residuals[inds]
-
-
-function reset_state!(s::NewtonSolver)
-    s.numiter = 0
-    fill!(s.residuals, 0)
-end
-
-function update_state!(s::NewtonSolver, _, r)
-    s.numiter += 1
-    s.residuals[s.numiter] = r 
-end
+get_max_iter(nlsolver::NewtonSolver) = nlsolver.maxiter
+get_tolerance(nlsolver::NewtonSolver) = nlsolver.tolerance
+get_solver_state(nlsolver::NewtonSolver) = nlsolver.state

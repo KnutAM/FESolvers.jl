@@ -53,13 +53,14 @@ end
 
 FESolvers.calculate_convergence_measure(p::TestProblem, args...) = norm(p.r)
 FESolvers.handle_converged!(p::TestProblem) = push!(p.conv, true)
-function FESolvers.postprocess!(p::TestProblem, step, solver)
+function FESolvers.postprocess!(p::TestProblem, solver)
+    step = FESolvers.get_step(solver)
     step == p.throw_at_step && throw(TestError())
     push!(p.xv, copy(p.x))
     push!(p.rv, copy(p.r))
     push!(p.tv, p.time[1])
     push!(p.steps, step)
-    push!(p.niter, FESolvers.getnumiter(solver.nlsolver))
+    push!(p.niter, FESolvers.get_num_iter(solver.nlsolver))
 end
 
 struct LinearTestProblem{T,FF<:Function,DF<:Function}
@@ -100,7 +101,7 @@ function FESolvers.update_problem!(p::LinearTestProblem, Δu, update_spec)
 end
 
 FESolvers.handle_converged!(p::LinearTestProblem) = push!(p.conv, true)
-FESolvers.postprocess!(p::LinearTestProblem, step) = push!(p.uend, last(p.u))
+FESolvers.postprocess!(p::LinearTestProblem, args...) = push!(p.uend, last(p.u))
 
 
 # Test case for nonlinear solvers

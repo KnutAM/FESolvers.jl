@@ -1,11 +1,23 @@
+mutable struct DummyNLSolver
+    converged::Bool
+end
+FESolvers.is_converged(ds::DummyNLSolver) = ds.converged
+function FESolvers.check_convergence(ds::DummyNLSolver)
+    ds.converged && return nothing
+    throw(FESolvers.ConvergenceError("DummyNLSolver not converged"))
+end
+FESolvers.get_num_iter(::DummyNLSolver) = 1
+FESolvers.get_max_iter(::DummyNLSolver) = 4
+
 function run_timestepper(solver, convergence_function=Returns(true))
-    t = FESolvers.initial_time(solver.timestepper)
-    t_old = t
-    step = 1
+    timestepper = FESolvers.get_timestepper(solver)
+    FESolvers.reset_timestepper!(timestepper)
+    t_old = FESolvers.get_time(timestepper)
     converged = true
-    timehistory = [t]
-    while !FESolvers.islaststep(solver.timestepper, t, step)
-        t, step = FESolvers.update_time(solver, t, step, converged)
+    timehistory = [t_old]
+    while !FESolvers.is_last_step(timestepper)
+        FESolvers.step_time!(timestepper, DummyNLSolver(converged))
+        t = FESolvers.get_time(timestepper)
         Δt = t - t_old
         converged = convergence_function(t, Δt, step)
         if converged
@@ -16,8 +28,7 @@ function run_timestepper(solver, convergence_function=Returns(true))
     return timehistory
 end
 
-FESolvers.getnumiter(::Nothing) = 1
-FESolvers.getmaxiter(::Nothing) = 4
+
 
 @testset "timesteppers" begin
     
@@ -31,8 +42,8 @@ FESolvers.getmaxiter(::Nothing) = 4
         th = run_timestepper(solver, (args...) -> true)
         @test all( Δt .≈ (th[2:end]-th[1:end-1]))
         @test length(th) == (num_steps+1)
-
-        @test_throws FESolvers.ConvergenceError run_timestepper(solver, (time, args...) -> time < sum(t)/length(t))
+        t_avg = sum(t)/length(t)
+        @test_throws FESolvers.ConvergenceError run_timestepper(solver, (time, args...) -> time < t_avg)
     end
 
     @testset "AdaptiveTimeStepper" begin
@@ -53,15 +64,15 @@ FESolvers.getmaxiter(::Nothing) = 4
         Δt_max = 0.2
 
         ts = AdaptiveTimeStepper(Δt, t_end; Δt_min=Δt_min, Δt_max=Δt_max)
-        solver = QuasiStaticSolver(nothing, ts)
-        @test FESolvers.initial_time(ts) ≈ 0.0
-        t, step = FESolvers.update_time(solver, 0.0, 1, true)
-        @test t ≈ Δt 
-        @test step == 2
+        solver = QuasiStaticSolver(DummyNLSolver(true), ts)
+        @test FESolvers.get_time(ts) ≈ 0.0
+        FESolvers.step_time!(solver)
+        @test FESolvers.get_time(solver) ≈ Δt 
+        @test FESolvers.get_step(solver) == 2
 
         cf(t, Δt, _) = t < 1.0 || Δt < (Δt_min+sqrt(eps(Δt_min)))
 
-        th = run_timestepper(QuasiStaticSolver(nothing,ts), cf)
+        th = run_timestepper(QuasiStaticSolver(DummyNLSolver(true),ts), cf)
         
         Δth = th[2:end]-th[1:end-1]
         @test Δth[1] .≈ Δt
@@ -72,7 +83,7 @@ FESolvers.getmaxiter(::Nothing) = 4
         t_end = 0.91
         Δt = 0.1
         ts = AdaptiveTimeStepper(Δt, t_end; Δt_max = Δt)
-        th = run_timestepper(QuasiStaticSolver(nothing,ts), (args...)->true)
+        th = run_timestepper(QuasiStaticSolver(DummyNLSolver(true),ts), (args...)->true)
         Δth = th[2:end]-th[1:end-1]
         # Last two steps should take half each when the reminder is less then Δt_min
         @test Δth[end] ≈ Δth[end-1] ≈ (mod(t_end, Δt) + Δt)/2
@@ -82,9 +93,11 @@ FESolvers.getmaxiter(::Nothing) = 4
         Δt = 0.1
         ts = AdaptiveTimeStepper(Δt, 3*Δt; Δt_min=Δt)
         # Not converged in first iteration (setup issue)
-        @test_throws ArgumentError FESolvers.update_time(ts, nothing, 0.0, #=step=# 1, #=converged=# false)
+        @test_throws AssertionError FESolvers.step_time!(ts, DummyNLSolver(false))
+        
+        FESolvers.step_time!(ts, DummyNLSolver(true)) # Make one step
         # Cannot reduce time step further
-        @test_throws FESolvers.ConvergenceError FESolvers.update_time(ts, nothing, Δt, 2, false)
+        @test_throws FESolvers.ConvergenceError FESolvers.step_time!(ts, DummyNLSolver(false))
     end
 
 end

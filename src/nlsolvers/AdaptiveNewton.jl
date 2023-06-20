@@ -11,7 +11,7 @@ are given to `update_types`, and the criterion to switch
 between them is given to `switch_criterion`. Remaining options
 are similar to the standard newton solver. 
 """
-Base.@kwdef mutable struct AdaptiveNewtonSolver{LinearSolver,LineSearch,T,UT,SC}
+Base.@kwdef mutable struct AdaptiveNewtonSolver{LinearSolver,LineSearch,T,UT,SC,SS}
     const linsolver::LinearSolver = BackslashSolver()
     const linesearch::LineSearch = NoLineSearch()
     const maxiter::Int = 10
@@ -21,8 +21,7 @@ Base.@kwdef mutable struct AdaptiveNewtonSolver{LinearSolver,LineSearch,T,UT,SC}
     update_type_nr::Int=1
     const switch_criterion::SC
     reset_problem::Bool=false
-    numiter::Int = 0  # Current number of iterations (reset at beginning of new iteration)
-    const residuals::Vector{T} = zeros(typeof(tolerance),maxiter+1)  # Last step residual history
+    const state::SS=SolverState(maxiter)
 end
 getsystemmatrix(problem, ::AdaptiveNewtonSolver) = getjacobian(problem)
 
@@ -30,8 +29,8 @@ _get_update_type(nls::AdaptiveNewtonSolver) = nls.update_types[nls.update_type_n
 function get_initial_update_spec(nls::AdaptiveNewtonSolver)
     return UpdateSpec(;jacobian=!(nls.update_jac_first), residual=false, type=_get_update_type(nls))
 end
-function get_first_update_spec(nls::AdaptiveNewtonSolver, last_converged::Bool)
-    if last_converged
+function get_first_update_spec(nls::AdaptiveNewtonSolver)
+    if is_converged(nls)
         return UpdateSpec(jacobian=nls.update_jac_first, residual=true, type=_get_update_type(nls))
     else # We must update since jacobian when it didn't converge
         return UpdateSpec(jacobian=true, residual=true, type=_get_update_type(nls))
@@ -41,37 +40,29 @@ function get_update_spec(nls::AdaptiveNewtonSolver)
     return UpdateSpec(;jacobian=true, residual=true, type=_get_update_type(nls))
 end
 
+get_max_iter(nlsolver::AdaptiveNewtonSolver) = nlsolver.maxiter
+get_tolerance(nlsolver::AdaptiveNewtonSolver) = nlsolver.tolerance
+
 get_linesearch(nlsolver::AdaptiveNewtonSolver) = nlsolver.linesearch
 get_linear_solver(nlsolver::AdaptiveNewtonSolver) = nlsolver.linsolver
-
-getmaxiter(nlsolver::AdaptiveNewtonSolver) = nlsolver.maxiter
-gettolerance(nlsolver::AdaptiveNewtonSolver) = nlsolver.tolerance
-getnumiter(s::AdaptiveNewtonSolver) = s.numiter
-get_convergence_measures(s::AdaptiveNewtonSolver, inds=1:getnumiter(s)) = s.residuals[inds]
+get_solver_state(nlsolver::AdaptiveNewtonSolver) = nlsolver.state
 
 get_type_number(s::AdaptiveNewtonSolver) = s.update_type_nr
 
-function reset_state!(s::AdaptiveNewtonSolver)
-    s.numiter = 0
-    fill!(s.residuals, 0)
+function reset_solver_state!(s::AdaptiveNewtonSolver)
+    reset_solver_state!(get_solver_state(s))
     s.update_type_nr = 1
     s.reset_problem = false
 end
 
-function update_state!(s::AdaptiveNewtonSolver, _, r)
-    s.numiter += 1
-    s.residuals[s.numiter] = r
-    if s.numiter > 1
+function update_solver_state!(s::AdaptiveNewtonSolver, _, r)
+    update_solver_state!(get_solver_state(s), s, r)
+    if get_num_iter(s) > 1
         s.reset_problem, s.update_type_nr = switch_information(s.switch_criterion, s)
     end
 end
 
-function maybe_reset_problem!(problem, Δa, s::AdaptiveNewtonSolver)
-    if s.reset_problem
-        map!(-, Δa, Δa)
-        update_problem!(problem, Δa, get_update_spec(s))
-    end
-end
+should_reset_problem(s::AdaptiveNewtonSolver) = s.reset_problem
 
 """
     switch_information(switch_criterion, nlsolver)
@@ -96,7 +87,7 @@ iterations with `update_types[1]`
 end
 
 function switch_information(crit::NumIterSwitch, nls)
-    numiter = getnumiter(nls)
+    numiter = get_num_iter(nls)
     reset_problem = false
     new_nr = numiter > crit.switch_after ? 2 : 1
     return reset_problem, new_nr
@@ -115,8 +106,8 @@ struct ToleranceSwitch{T}
     switch_at::T
 end
 function switch_information(crit::ToleranceSwitch, nls)
-    k = getnumiter(nls)
-    r = get_convergence_measures(nls, k)
+    k = get_num_iter(nls)
+    r = get_convergence_measure(nls, k)
     if r > crit.switch_at
         reset_problem = (get_type_number(nls) == 2)
         return reset_problem, 1
@@ -140,8 +131,8 @@ mutable struct IncreaseSwitch
 end
 IncreaseSwitch(;num_slow) = IncreaseSwitch(num_slow, -(num_slow+1))
 function switch_information(crit::IncreaseSwitch, nls)
-    k = getnumiter(nls)
-    Δr = get_convergence_measures(nls, k) - get_convergence_measures(nls, k-1)
+    k = get_num_iter(nls)
+    Δr = get_convergence_measure(nls, k) - get_convergence_measure(nls, k-1)
     if Δr < 0 && (crit.num_at_switch+crit.num_slow < k) 
         return false, 1 # Use primary technique (typically faster, but less stable)
     else 

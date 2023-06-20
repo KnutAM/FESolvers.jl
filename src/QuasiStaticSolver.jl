@@ -11,38 +11,36 @@ struct QuasiStaticSolver{NLS,TS} <: FESolver
 end
 QuasiStaticSolver(;nlsolver, timestepper) = QuasiStaticSolver(nlsolver, timestepper)
 
-getnlsolver(s::QuasiStaticSolver) = s.nlsolver
-gettimestepper(s::QuasiStaticSolver) = s.timestepper
+get_nlsolver(s::QuasiStaticSolver) = s.nlsolver
+get_timestepper(s::QuasiStaticSolver) = s.timestepper
 
 function _solve_problem!(problem, solver::QuasiStaticSolver)
     # Setup 
-    nlsolver = getnlsolver(solver)
-    timestepper = gettimestepper(solver)
-    t = initial_time(timestepper)
-    step = 1
-    converged = true
+    nlsolver = get_nlsolver(solver)
+    timestepper = get_timestepper(solver)
     xold = deepcopy(getunknowns(problem))
     
     # Initial update of stiffness (or residual) if requested by the nlsolver
-    if do_initial_update(nlsolver)
+    if should_do_initial_update(nlsolver)
         update_problem!(problem, nothing, get_initial_update_spec(nlsolver))
     end
 
     # Initial postprocessing (to save initial conditions)
-    postprocess!(problem, step, solver)
+    postprocess!(problem, solver)
 
     # Main time-stepping loop
-    while !(converged && islaststep(timestepper, t, step))
-        t, step = update_time(solver, t, step, converged)
-        update_to_next_step!(problem, t)
-        converged = solve_nonlinear!(problem, nlsolver, converged)
-        if converged
+    while !is_finished(solver)                               # FESolvers function
+        step_time!(solver)                                   # FESolvers function
+        update_to_next_step!(problem, get_time(timestepper)) # User function
+        solve_nonlinear!(problem, nlsolver)                  # FESolvers function
+        if is_converged(nlsolver)                           # FESolvers function
             copy!(xold, getunknowns(problem))
-            postprocess!(problem, step, solver)
-            handle_converged!(problem)
+            postprocess!(problem, solver)                    # User function
+            handle_converged!(problem)                       # User function
         else
-            # Reset unknowns if it didn't converge to 
-            setunknowns!(problem, xold)
-        end
+            # Reset unknowns if no convergence and,
+            # potentially, try a different time step
+            setunknowns!(problem, xold)                      # User function
+        end                                                  # (with default implementation)
     end
 end

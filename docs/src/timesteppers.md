@@ -10,7 +10,9 @@ AdaptiveTimeStepper
 A time stepper should support the following functions
 
 ```@docs
-FESolvers.initial_time
-FESolvers.islaststep
-FESolvers.update_time
+FESolvers.get_time
+FESolvers.get_step
+FESolvers.is_last_step
+FESolvers.step_time!
+FESolvers.reset_timestepper!
 ```

@@ -11,11 +11,9 @@ export NoLineSearch, ArmijoGoldstein
 export BackslashSolver
 export FixedTimeStepper, AdaptiveTimeStepper
 
-struct ConvergenceError <: Exception
-    msg::String
-end
+include("Convergence.jl")
 
-abstract type FESolver end
+include("FESolver.jl")
 
 include("problem.jl")
 include("linearsolvers.jl")

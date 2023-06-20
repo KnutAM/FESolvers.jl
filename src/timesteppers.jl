@@ -1,36 +1,45 @@
 """
-    initial_time(timestepper)
+    get_time(timestepper)
 
-Return the starting time for the given `timestepper`
+Return the current time for `timestepper`
 """
-function initial_time end
+function get_time end
 
 """
-    islaststep(timestepper, time, step)->Bool
+    get_step(timestepper)
+
+Return the current step number
+"""
+function get_step end
+
+"""
+    is_last_step(timestepper)->Bool
 
 Return `true` if the current `step`/`time` is the last step,
 return `false` otherwise 
 """
-function islaststep end
+function is_last_step end
 
 """
-    update_time(solver, time, step, converged::Bool)
-    update_time(timestepper, nlsolver, time, step, converged::Bool)
+    step_time!(solver)
+    step_time!(timestepper, nlsolver)
 
-Return the next time and step number, depending on if the previous time step converged 
-or not. If not converged, return the same `step` but a `new_time<time` to reduce the 
-time step. If it is not possible to retry with shorter timestep, throw 
-`ConvergenceError`. If converged, update time step as planned. 
-Note: The full solver is given as input to allow specialization on e.g. if a 
-Newton iteration has required many iterations, shorten the next time step as a 
-precausionary step.
+Increment the `timestepper` depending on the convergence status of `nlsolver`.
+If not converged and a smaller time step is not possible, throw `ConvergenceError`. 
 
 Note that a call to the first definition is forwarded to the second function definition 
 by decomposing the solver, unless another specialization is defined.
 """
-function update_time end
+function step_time! end
 
-update_time(s::FESolver, args...; kwargs...) = update_time(gettimestepper(s), getnlsolver(s), args...; kwargs...)
+step_time!(s::FESolver) = step_time!(get_timestepper(s), get_nlsolver(s))
+
+"""
+    reset_timestepper!(timestepper)
+
+Reset the time and step in `timestepper`
+"""
+function reset_timestepper! end
 
 """
     FixedTimeStepper(num_steps::int, Δt, t_start=0)
@@ -41,23 +50,25 @@ interface is used, constant increments are used. Note that
 `length(t)=num_steps+1` since the first value is just the initial 
 value and is not an actual step.  
 """
-struct FixedTimeStepper{T}
-    t::Vector{T}
+mutable struct FixedTimeStepper{T}
+    const t::Vector{T}
+    step::Int
 end
+FixedTimeStepper(t::Vector) = FixedTimeStepper(t, 1)
 function FixedTimeStepper(;num_steps::Int, Δt=1, t_start=zero(Δt))
     return FixedTimeStepper(t_start .+ collect(0:Δt:((num_steps)*Δt)))
 end
 
-initial_time(ts::FixedTimeStepper) = first(ts.t)
-islaststep(ts::FixedTimeStepper, _, step) = step >= length(ts.t)
-function update_time(ts::FixedTimeStepper, nlsolver, t, step, converged)
-    if !converged
-        msg = "nonlinear solve failed and FixedTimeStepper cannot adjust time step"
-        throw(ConvergenceError(msg))
-    end
-    return ts.t[step+1], step+1
+get_time(ts::FixedTimeStepper) = ts.t[ts.step]
+get_step(ts::FixedTimeStepper) = ts.step
+is_last_step(ts::FixedTimeStepper) = ts.step >= length(ts.t)
+function step_time!(ts::FixedTimeStepper, nlsolver)
+    check_convergence(nlsolver)
+    ts.step += 1
 end
-
+function reset_timestepper!(ts::FixedTimeStepper)
+    ts.step = 1
+end
 
 """
     AdaptiveTimeStepper(
@@ -77,7 +88,7 @@ required to converge; `numiter`. The time step is changed as
 In this expression, `maxiter` and `optiter` are the maximum and optimum 
 number of iterations for the nonlinear solver. 
 `optiter=floor(maxiter*optiter_ratio)` and `maxiter` is obtained from 
-the nonlinear solver (via `getmaxiter(s)`)
+the nonlinear solver (via `get_max_iter(s)`)
 
 If `numiter=maxiter`, then `m=1` and the time step update is the same as
 for a non-converged solution if `k=1`. Note that `k>0`, `change_factor∈[0,1]`,
@@ -93,6 +104,8 @@ mutable struct AdaptiveTimeStepper{T}
     const optiter_ratio::T
     const k::T
     Δt::T
+    step::Int
+    time::T
 end
 
 function AdaptiveTimeStepper(
@@ -116,51 +129,55 @@ function AdaptiveTimeStepper(
 
     return AdaptiveTimeStepper(
         t_start, t_end, Δt_init, Δt_min, Δt_max,
-        change_factor, optiter_ratio, k, Δt_init)
+        change_factor, optiter_ratio, k, Δt_init, 1, t_start)
 end
 
-initial_time(ts::AdaptiveTimeStepper) = ts.t_start 
-islaststep(ts::AdaptiveTimeStepper, t, step) = t >= ts.t_end - eps(t)
-function update_time(ts::AdaptiveTimeStepper, nlsolver, t, step, converged)
+get_time(ts::AdaptiveTimeStepper) = ts.time
+get_step(ts::AdaptiveTimeStepper) = ts.step
+is_last_step(ts::AdaptiveTimeStepper) = ts.time >= ts.t_end - eps(ts.t_end)
+function reset_timestepper!(ts::AdaptiveTimeStepper)
+    ts.Δt = ts.Δt_init
+    ts.step = 1
+    ts.time = ts.t_start
+end
+
+function step_time!(ts::AdaptiveTimeStepper, nlsolver)
     # Initialization
-    if step == 1 
-        if !converged
-            msg = "step=1 implies initial step and then \"convergence of the previous step\" must be true"
-            throw(ArgumentError(msg))
-        end
-        ts.Δt = min(t+ts.Δt_init, ts.t_end)-t
-        return t+ts.Δt, step+1
+    if ts.step == 1
+        @assert is_converged(nlsolver)
+        ts.Δt = min(ts.time+ts.Δt_init, ts.t_end) - ts.time
+        ts.time += ts.Δt
+        ts.step += 1
+        return nothing
     end
 
-    if !converged
-        if ts.Δt ≈ ts.Δt_min
-            msg = "The nonlinear solve failed and the AdaptiveTimeStepper is at its minimum time step"
-            throw(ConvergenceError(msg))
-        end
-        t -= ts.Δt
-        ts.Δt = max(ts.Δt*ts.change_factor, ts.Δt_min)
-    else
-        numiter = getnumiter(nlsolver)
-        maxiter = getmaxiter(nlsolver)
+    (ts.Δt ≈ ts.Δt_min) && check_convergence(nlsolver)
+
+    if is_converged(nlsolver)
+        numiter = get_num_iter(nlsolver)
+        maxiter = get_max_iter(nlsolver)
         optiter = Int(floor(ts.optiter_ratio*maxiter))
         m = (numiter-optiter)/(maxiter-optiter)
         ts.Δt = min(max(ts.Δt * (ts.change_factor^m), ts.Δt_min), ts.Δt_max)
-        step += 1
+        ts.step += 1
+    else
+        ts.time -= ts.Δt
+        ts.Δt = max(ts.Δt*ts.change_factor, ts.Δt_min)
     end
 
     # Ensure that the last time step is not too short.
     # With the following algorithm, the last two time steps
     # are only guaranteed to be > Δt_min/2
-    t_remaining = ts.t_end - (t+ts.Δt)
-    if t_remaining < eps(t)
-        ts.Δt = ts.t_end-t
-        t = ts.t_end
+    t_remaining = ts.t_end - (ts.time + ts.Δt)
+    if t_remaining < eps(ts.time)
+        ts.Δt = ts.t_end - ts.time
+        ts.time = ts.t_end
     elseif t_remaining < ts.Δt_min
-        ts.Δt = (ts.t_end - t)/2
-        t += ts.Δt
+        ts.Δt = (ts.t_end - ts.time)/2
+        ts.time += ts.Δt
     else
-        t += ts.Δt
+        ts.time += ts.Δt
     end
 
-    return t, step
+    return nothing
 end

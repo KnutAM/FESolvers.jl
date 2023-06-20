@@ -106,34 +106,19 @@ A standard case when using [Ferrite.jl](https://github.com/Ferrite-FEM/Ferrite.j
 is `norm(getresidual(problem)[Ferrite.free_dofs(ch)])` 
 where `ch::Ferrite.ConstraintHandler`. `Δa` is the update of the unknowns from 
 the previous iteration. Note that `iter=1` implies `Δa=0`
-
-The advanced API alternative is [`check_convergence_criteria`](@ref)
 """
 function calculate_convergence_measure end
 
 """
-    check_convergence_criteria(problem, nlsolver, Δa, iter) -> Bool
+    postprocess!(problem, solver)
 
-Check if `problem` has converged and update the state 
-of `nlsolver`, see [`FESolvers.update_state!`](@ref).
-"""
-function check_convergence_criteria(problem, nlsolver, Δa, iter)
-    r = calculate_convergence_measure(problem, Δa, iter)
-    update_state!(nlsolver, problem, r)
-    return r < gettolerance(nlsolver)
-end
-
-"""
-    postprocess!(problem, step, solver)
-
-Perform any postprocessing at the current time and step nr `step`
+Perform any postprocessing at the current time.
 Called at the beginning of the simulation, 
 and after time step converged right before `handle_converged!`.
 """
 function postprocess! end
-# The 2-argument (problem, step) version should be removed. Leave undocumented for now
-postprocess!(problem, step, solver) = postprocess!(problem, step) 
-postprocess!(args...) = nothing
+# The 3-argument (problem, step, solver) version should be removed. Leave undocumented for now
+postprocess!(problem, solver) = postprocess!(problem, get_step(solver), solver)
 
 """
     handle_converged!(problem)
