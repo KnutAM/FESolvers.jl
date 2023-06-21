@@ -94,7 +94,7 @@ function switch_information(crit::NumIterSwitch, nls)
 end
 
 """
-    NumIterSwitch(;switch_after)
+    ToleranceSwitch(;switch_at)
 
 Use `update_types[1]` when the convergence measure is larger than
 `switch_at`. When the convergence measure is below `switch_at`, 
@@ -102,7 +102,7 @@ use `update_types[2]`. If the convergence measure increases above
 `switch_at` again, reset the problem and change to `update_types[1]`
 iterations with `update_types[1]`.
 """
-struct ToleranceSwitch{T}
+@kwdef struct ToleranceSwitch{T}
     switch_at::T
 end
 function switch_information(crit::ToleranceSwitch, nls)

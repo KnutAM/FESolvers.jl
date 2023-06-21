@@ -1,3 +1,4 @@
+
 @testset "nlsolvers" begin
     function test_basic_functions(nlsolver, tol, maxiter)
         @test FESolvers.get_tolerance(nlsolver) ≈ tol
@@ -123,5 +124,72 @@ end
         state.numiter = 8
         state.residuals[8] = 9.0 # Increasing again
         test_expected!(nls; expected_reset=true, expected_nr=2)
+    end
+end
+
+@testset "AdaptiveNLSolver" begin
+    struct DummyProblem end 
+    FESolvers.getunknowns(::DummyProblem) = zeros(1)
+    mutable struct MockNLSolver
+        maxiter::Int
+        converge_at::Int
+        called::Bool
+    end
+    MockNLSolver(maxiter, converge_at) = MockNLSolver(maxiter, converge_at, false)
+
+    FESolvers.solve_nonlinear!(_, s::MockNLSolver) = (s.called = true)
+    FESolvers.is_converged(s::MockNLSolver) = s.converge_at <= s.maxiter 
+    FESolvers.get_num_iter(s::MockNLSolver) = min(s.converge_at, s.maxiter)
+    FESolvers.get_max_iter(s::MockNLSolver) = s.maxiter
+    FESolvers.set_update_type!(s::MockNLSolver, val) = (s.converge_at -= val)
+    
+    @testset "MultiStageSolver" begin    
+        mss_niter = FESolvers.MultiStageSolver([MockNLSolver(3, 4), MockNLSolver(2,2)], false)
+        mss_conv = FESolvers.MultiStageSolver([MockNLSolver(3,2), MockNLSolver(2,1)], true)
+        mss_fail = FESolvers.MultiStageSolver([MockNLSolver(2,3), MockNLSolver(2,1)], true)
+
+        FESolvers.solve_nonlinear!(DummyProblem(), mss_niter)
+        @test FESolvers.is_converged(mss_niter)
+        nls = FESolvers.get_all_nlsolvers(mss_niter)
+        @test !FESolvers.is_converged(nls[1])
+        @test all(s->s.called, nls)
+
+        FESolvers.solve_nonlinear!(DummyProblem(), mss_conv)
+        @test FESolvers.is_converged(mss_conv)
+        nls = FESolvers.get_all_nlsolvers(mss_conv)
+        @test all(FESolvers.is_converged, nls)
+        @test all(s->s.called, nls)
+
+        FESolvers.solve_nonlinear!(DummyProblem(), mss_fail)
+        @test !FESolvers.is_converged(mss_fail)
+        nls = FESolvers.get_all_nlsolvers(mss_fail)
+        @test !FESolvers.is_converged(nls[1])
+        @test nls[1].called
+        @test !nls[2].called
+    end
+    
+    @testset "DynamicSolver" begin
+        # Initially MockNLSolver does not converge, but 3 updates can be made, 
+        # where converge_at decreases by 1 each time. After 2 updates, it should converge. 
+        mock_solver = MockNLSolver(2,4)
+        dyn_solver = FESolvers.DynamicSolver(mock_solver, (s,n)->(1, false, (n>=3)))
+        @test first(FESolvers.get_all_nlsolvers(dyn_solver)) === mock_solver
+
+        FESolvers.solve_nonlinear!(DummyProblem(), dyn_solver)
+        @test FESolvers.is_converged(dyn_solver)
+        @test mock_solver.called
+        @test mock_solver.converge_at == mock_solver.maxiter
+        @test dyn_solver.num_attempts == 2
+        
+        # Initially MockNLSolver does not converge. 2 updates can be made, 
+        # where converge_at decreases by 1 each time, but this is not enough. 
+        mock_solver = MockNLSolver(2,5)
+        dyn_solver = FESolvers.DynamicSolver(mock_solver, (s,n)->(1, false, (n>=2)))
+        
+        FESolvers.solve_nonlinear!(DummyProblem(), dyn_solver)
+        @test !FESolvers.is_converged(dyn_solver)
+        @test mock_solver.called
+        @test mock_solver.converge_at == 3
+        @test dyn_solver.num_attempts == 2
     end
 end

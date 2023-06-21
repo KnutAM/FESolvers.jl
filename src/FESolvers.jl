@@ -21,6 +21,7 @@ include("linesearchers.jl")
 
 include("nlsolvers.jl")
 include("nlsolvers/Newton.jl")
+include("nlsolvers/AdaptiveNLSolver.jl")
 include("nlsolvers/SteepestDescent.jl")
 include("nlsolvers/AdaptiveNewton.jl")
 include("nlsolvers/LinearProblemSolver.jl")
