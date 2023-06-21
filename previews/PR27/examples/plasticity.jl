@@ -133,7 +133,7 @@ end;
 
 FESolvers.calculate_convergence_measure(p::PlasticityProblem, args...) = norm(FESolvers.getresidual(p)[free_dofs(p.def.ch)]);
 
-function FESolvers.postprocess!(p::PlasticityProblem, solver)
+function FESolvers.postprocess!(p::PlasticityProblem, step, solver)
     push!(p.post.umax, maximum(abs, FESolvers.getunknowns(p)))
     push!(p.post.tmag, p.def.traction_rate*p.buf.time[1])
 end;
