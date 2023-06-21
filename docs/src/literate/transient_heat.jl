@@ -185,8 +185,7 @@ struct PostProcessing{PVD}
 end
 PostProcessing() = PostProcessing(paraview_collection("transient-heat.pvd"));
 
-function FESolvers.postprocess!(p::TransientHeat, solver)
-    step = FESolvers.get_step(solver)
+function FESolvers.postprocess!(p::TransientHeat, step, solver)
     vtk_grid("transient-heat-$step", p.def.dh) do vtk
         vtk_point_data(vtk, p.def.dh, p.buf.u)
         vtk_save(vtk)

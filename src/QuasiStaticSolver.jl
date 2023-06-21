@@ -26,16 +26,16 @@ function _solve_problem!(problem, solver::QuasiStaticSolver)
     end
 
     # Initial postprocessing (to save initial conditions)
-    postprocess!(problem, solver)
+    postprocess!(problem, get_step(solver), solver)
 
     # Main time-stepping loop
     while !is_finished(solver)                               # FESolvers function
         step_time!(solver)                                   # FESolvers function
         update_to_next_step!(problem, get_time(timestepper)) # User function
         solve_nonlinear!(problem, nlsolver)                  # FESolvers function
-        if is_converged(nlsolver)                           # FESolvers function
+        if is_converged(nlsolver)                            # FESolvers function
             copy!(xold, getunknowns(problem))
-            postprocess!(problem, solver)                    # User function
+            postprocess!(problem, get_step(solver), solver)  # User function
             handle_converged!(problem)                       # User function
         else
             # Reset unknowns if no convergence and,

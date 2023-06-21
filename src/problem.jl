@@ -110,15 +110,15 @@ the previous iteration. Note that `iter=1` implies `Δa=0`
 function calculate_convergence_measure end
 
 """
-    postprocess!(problem, solver)
+    postprocess!(problem, step, solver)
 
 Perform any postprocessing at the current time.
 Called at the beginning of the simulation, 
 and after time step converged right before `handle_converged!`.
 """
 function postprocess! end
-# The 3-argument (problem, step, solver) version should be removed. Leave undocumented for now
-postprocess!(problem, solver) = postprocess!(problem, get_step(solver), solver)
+#TODO: Change to postprocess!(problem, solver)
+postprocess!(problem, step, solver) = postprocess!(problem, step)
 
 """
     handle_converged!(problem)

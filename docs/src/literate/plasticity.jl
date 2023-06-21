@@ -181,7 +181,7 @@ FESolvers.calculate_convergence_measure(p::PlasticityProblem, args...) = norm(FE
 
 # As postprocessing, which is called after we detect that the solution has converged, 
 # we save the maximum displacement as well as the traction magnitude.
-function FESolvers.postprocess!(p::PlasticityProblem, solver)
+function FESolvers.postprocess!(p::PlasticityProblem, step, solver)
     push!(p.post.umax, maximum(abs, FESolvers.getunknowns(p)))
     push!(p.post.tmag, p.def.traction_rate*p.buf.time[1])
 end;
