@@ -4,6 +4,7 @@ abstract type AbstractAdaptiveNLSolver end
 function reset_solver! end
 function is_finished end
 function is_converged end
+function check_convergence end
 function update_solver end
 function get_all_nlsolvers end
 
@@ -23,6 +24,29 @@ end
 get_max_iter(s::AbstractAdaptiveNLSolver) = sum(get_max_iter, get_all_nlsolvers(s))
 get_num_iter(s::AbstractAdaptiveNLSolver) = sum(get_num_iter, get_all_nlsolvers(s))
 get_initial_update_spec(s::AbstractAdaptiveNLSolver) = get_initial_update_spec(first(get_all_nlsolvers(s)))
+function get_convergence_measure(s::AbstractAdaptiveNLSolver, i::Integer)
+    nlsolvers = get_all_nlsolvers(s)
+    n = 0
+    for nlsolver in nlsolvers
+        Δn = get_num_iter(nlsolver)
+        i <= (n+Δn) && return get_convergence_measure(nlsolver, i-n)
+        n += Δn
+    end
+    throw(BoundsError(1:n, i))
+end
+function get_convergence_measure(s::AbstractAdaptiveNLSolver, ::Colon)
+    nlsolvers = get_all_nlsolvers(s)
+    r = copy(get_convergence_measure(first(nlsolvers), :))
+    for (i, nlsolver) in enumerate(nlsolvers)
+        i==1 && continue
+        append!(r, get_convergence_measure(nlsolver, :))
+    end
+    return r
+end
+function get_convergence_measure(s::AbstractAdaptiveNLSolver, inds)
+    # Inefficient implementation for now 
+    return [get_convergence_measure(s, i) for i in inds]
+end
 
 ### ======================================================================= ###
 ### MultiStageSolver
@@ -41,7 +65,7 @@ end
 function MultiStageSolver(nlsolvers, require_converged=true)
     make_vector(_, tovec::Vector) = tovec
     make_vector(s, tovec::Bool) = [tovec for _ in 1:(length(s)-1)]
-    return MultiStageSolver(nlsolvers, make_vector(nlsolvers, require_converged), 0)
+    return MultiStageSolver(nlsolvers, make_vector(nlsolvers, require_converged), length(nlsolvers))
 end
 get_current_nlsolver(s::MultiStageSolver) = s.nlsolvers[s.solver_id]
 get_all_nlsolvers(s::MultiStageSolver) = s.nlsolvers
@@ -51,9 +75,9 @@ function reset_solver!(s::MultiStageSolver)
 end
 function is_finished(s::MultiStageSolver)
     s.solver_id == 0                        && return false # Hasn't started
-    s.solver_id == length(s.nlsolvers)      && return true # Last nlsolver
+    s.solver_id == length(s.nlsolvers)      && return true  # Last nlsolver
     is_converged(get_current_nlsolver(s))   && return false # Converged, but not the last
-    s.require_converged[s.solver_id]        && return true # Not converged, but that is required
+    s.require_converged[s.solver_id]        && return true  # Not converged, but that is required
 end
 
 function is_converged(s::MultiStageSolver)
@@ -62,6 +86,16 @@ end
 function update_solver(s::MultiStageSolver)
     s.solver_id += 1
     return get_current_nlsolver(s)
+end
+
+function check_convergence(s::MultiStageSolver)
+    is_converged(s) && return nothing
+    foreach(check_convergence, get_all_nlsolvers(s))
+    @show is_converged.(get_all_nlsolvers(s))
+    @show s.solver_id
+    @show s.nlsolvers[1]
+    @show s.nlsolvers[2]
+    throw(ErrorException("This should not happen"))
 end
 
 ### ======================================================================= ###
@@ -94,6 +128,8 @@ end
 
 is_finished(s::DynamicSolver) = is_converged(s) || s.is_finished
 is_converged(s::DynamicSolver) = is_converged(s.nlsolver)
+check_convergence(s::DynamicSolver) = check_convergence(s.nlsolver)
+
 function update_solver(s::DynamicSolver)
     s.num_attempts += 1
     type, s.should_reset, s.is_finished = s.updater(s.nlsolver, s.num_attempts)
