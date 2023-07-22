@@ -33,7 +33,7 @@ function update_time end
 update_time(s::FESolver, args...; kwargs...) = update_time(gettimestepper(s), getnlsolver(s), args...; kwargs...)
 
 """
-    FixedTimeStepper(num_steps::int, Δt, t_start=0)
+    FixedTimeStepper(;num_steps::Int, Δt=1, t_start=0)
     FixedTimeStepper(t::Vector)
 
 A time stepper which gives fixed time steps. If the convenience
