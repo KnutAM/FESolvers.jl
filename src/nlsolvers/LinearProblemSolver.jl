@@ -42,18 +42,19 @@ get_linesearch(::LinearProblemSolver) = NoLineSearch()
 get_linear_solver(nlsolver::LinearProblemSolver) = nlsolver.linsolver
 
 # Support this just for convenience, it makes it easier when printing status etc. 
-getnumiter(::LinearProblemSolver) = 0
-getmaxiter(::LinearProblemSolver) = 1
-gettolerance(::LinearProblemSolver) = NaN
-get_convergence_measures(s::LinearProblemSolver, i::Number) = NaN
-function get_convergence_measures(s::LinearProblemSolver, inds)
-    checkbounds([NaN, NaN], inds)
-    return [NaN for _ in inds]
+get_max_iter(::LinearProblemSolver) = 1
+get_tolerance(::LinearProblemSolver) = NaN
+
+get_num_iter(::LinearProblemSolver) = 0
+function get_convergence_measure(::LinearProblemSolver, args...)
+    state = SolverState(1)
+    state.numiter = 2
+    get_convergence_measure(state, args...)
 end
-get_convergence_measures(s::LinearProblemSolver) = [NaN,NaN]
+is_converged(::LinearProblemSolver) = true
+check_convergence(::LinearProblemSolver) = nothing # Always converged
 
-
-function solve_nonlinear!(problem, nlsolver::LinearProblemSolver, last_converged)
+function solve_nonlinear!(problem, nlsolver::LinearProblemSolver)
     update_problem!(problem, nothing, get_first_update_spec(nlsolver))
     Δa = similar(getunknowns(problem))
     

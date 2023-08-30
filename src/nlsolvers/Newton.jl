@@ -25,45 +25,35 @@ constant time steps, `update_jac_first=false` is often a good choice.
 However, for time-dependent problems with changing time step length, 
 the standard solver (default), may work better. 
 """
-Base.@kwdef mutable struct NewtonSolver{LinearSolver,LineSearch,T}
+Base.@kwdef mutable struct NewtonSolver{LinearSolver,LineSearch,T,UT,SS}
     const linsolver::LinearSolver = BackslashSolver()
     const linesearch::LineSearch = NoLineSearch()
     const maxiter::Int = 10
     const tolerance::T = 1e-6
     const update_jac_first::Bool=true # Should jacobian be updated first iteration
     const update_jac_each::Bool=true  # Should jacobian be updated each iteration
-    numiter::Int = 0  # Current number of iterations (reset at beginning of new iteration)
-    const residuals::Vector{T} = zeros(typeof(tolerance),maxiter+1)  # Last step residual history
+    update_type::UT=nothing
+    const state::SS=SolverState(maxiter)
 end
 getsystemmatrix(problem, ::NewtonSolver) = getjacobian(problem)
 
-get_initial_update_spec(nlsolver::NewtonSolver) = UpdateSpec(jacobian=!(nlsolver.update_jac_first), residual=false)
-function get_first_update_spec(nlsolver::NewtonSolver, last_converged::Bool)
-    if last_converged
-        return UpdateSpec(jacobian=nlsolver.update_jac_first, residual=true)
+get_initial_update_spec(nls::NewtonSolver) = UpdateSpec(;jacobian=!(nls.update_jac_first), residual=false, type=nls.update_type)
+function get_first_update_spec(nls::NewtonSolver)
+    if is_converged(nls)
+        return UpdateSpec(;jacobian=nls.update_jac_first, residual=true, type=nls.update_type)
     else # We must update if jacobian was updated for each
-        return UpdateSpec(jacobian=nlsolver.update_jac_each, residual=true)
+        return UpdateSpec(;jacobian=nls.update_jac_each, residual=true, type=nls.update_type)
     end
 end
-function get_update_spec(nlsolver::NewtonSolver)
-    return UpdateSpec(;jacobian=nlsolver.update_jac_each, residual=true)
+function get_update_spec(nls::NewtonSolver)
+    return UpdateSpec(;jacobian=nls.update_jac_each, residual=true, type=nls.update_type)
 end
 
-get_linesearch(nlsolver::NewtonSolver) = nlsolver.linesearch
-get_linear_solver(nlsolver::NewtonSolver) = nlsolver.linsolver
+get_linesearch(nls::NewtonSolver) = nls.linesearch
+get_linear_solver(nls::NewtonSolver) = nls.linsolver
 
-getmaxiter(nlsolver::NewtonSolver) = nlsolver.maxiter
-gettolerance(nlsolver::NewtonSolver) = nlsolver.tolerance
-getnumiter(s::NewtonSolver) = s.numiter
-get_convergence_measures(s::NewtonSolver, inds=1:getnumiter(s)) = s.residuals[inds]
+get_max_iter(nls::NewtonSolver) = nls.maxiter
+get_tolerance(nls::NewtonSolver) = nls.tolerance
+get_solver_state(nls::NewtonSolver) = nls.state
 
-
-function reset_state!(s::NewtonSolver)
-    s.numiter = 0
-    fill!(s.residuals, 0)
-end
-
-function update_state!(s::NewtonSolver, _, r)
-    s.numiter += 1
-    s.residuals[s.numiter] = r 
-end
+set_update_type!(nls::NewtonSolver, type) = (nls.update_type = type)

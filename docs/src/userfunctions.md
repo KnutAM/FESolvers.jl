@@ -29,7 +29,6 @@ FESolvers.calculate_energy
 ## Advanced API
 ```@docs
 FESolvers.getsystemmatrix
-FESolvers.check_convergence_criteria
 ```
 
 ## Additional functions

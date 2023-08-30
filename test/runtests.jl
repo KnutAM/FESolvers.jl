@@ -5,7 +5,6 @@ import Base: @kwdef
 include("testproblem.jl")
 include("TestNLSolver.jl")
 
-
 include("test_linearsolvers.jl")
 include("test_nlsolvers.jl")
 include("test_timesteppers.jl")
@@ -67,12 +66,12 @@ include("test_timesteppers.jl")
 
     # Smoke-test the access function for the linear nlsolver
     lps = s_linear.nlsolver
-    @test FESolvers.getnumiter(lps) == 0
-    @test FESolvers.getmaxiter(lps) == 1
-    @test isnan(FESolvers.gettolerance(lps))
-    @test isnan(FESolvers.get_convergence_measures(lps, 1))
-    @test all(isnan, FESolvers.get_convergence_measures(lps))
-    @test all(isnan, FESolvers.get_convergence_measures(lps, 1:2))
-    @test_throws BoundsError FESolvers.get_convergence_measures(lps, 1:3)
+    @test FESolvers.get_num_iter(lps) == 0
+    @test FESolvers.get_max_iter(lps) == 1
+    @test isnan(FESolvers.get_tolerance(lps))
+    @test isnan(FESolvers.get_convergence_measure(lps, 1))
+    @test all(isnan, FESolvers.get_convergence_measure(lps))
+    @test all(isnan, FESolvers.get_convergence_measure(lps, 1:2))
+    @test_throws BoundsError FESolvers.get_convergence_measure(lps, 1:3)
 end
 # =#

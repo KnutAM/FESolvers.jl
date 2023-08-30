@@ -10,34 +10,23 @@ Thus, it is especially suited for strongly nonlinear behavior with potentially v
 For this method, it is required to implement [`getdescentpreconditioner`](@ref) or alternatively
 [`getsystemmatrix`](@ref) with `SteepestDescent`. 
 """
-Base.@kwdef mutable struct SteepestDescent{LineSearch,LinearSolver,T}
+Base.@kwdef mutable struct SteepestDescent{LineSearch,LinearSolver,T,SS}
     const linsolver::LinearSolver = BackslashSolver()
     const linesearch::LineSearch = ArmijoGoldstein()
     const maxiter::Int = 200
     const tolerance::T = 1e-6
-    numiter::Int = 0  # Last step number of iterations
-    const residuals::Vector{T} = zeros(typeof(tolerance),maxiter+1)  # Last step residual history
+    const state::SS=SolverState(maxiter)
 end
 getsystemmatrix(problem, ::SteepestDescent) = getdescentpreconditioner(problem)
 
 get_initial_update_spec(::SteepestDescent) = UpdateSpec(;jacobian=false, residual=false)
-get_first_update_spec(::SteepestDescent, _) = UpdateSpec(;jacobian=false, residual=true)
+get_first_update_spec(::SteepestDescent) = UpdateSpec(;jacobian=false, residual=true)
 get_update_spec(::SteepestDescent) = UpdateSpec(;jacobian=false, residual=true)
 
 get_linesearch(nlsolver::SteepestDescent) = nlsolver.linesearch
 get_linear_solver(nlsolver::SteepestDescent) = nlsolver.linsolver
 
-getmaxiter(nlsolver::SteepestDescent) = nlsolver.maxiter
-gettolerance(nlsolver::SteepestDescent) = nlsolver.tolerance
-getnumiter(s::SteepestDescent) = s.numiter
-get_convergence_measures(s::SteepestDescent, inds=1:getnumiter(s)) = s.residuals[inds]
+get_max_iter(nlsolver::SteepestDescent) = nlsolver.maxiter
+get_tolerance(nlsolver::SteepestDescent) = nlsolver.tolerance
 
-function reset_state!(s::SteepestDescent)
-    s.numiter = 0
-    fill!(s.residuals, 0)
-end
-
-function update_state!(s::SteepestDescent, _, r)
-    s.numiter += 1
-    s.residuals[s.numiter] = r 
-end
+get_solver_state(nlsolver::SteepestDescent) = nlsolver.state
