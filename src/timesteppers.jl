@@ -42,7 +42,7 @@ Reset the time and step in `timestepper`
 function reset_timestepper! end
 
 """
-    FixedTimeStepper(num_steps::int, Δt, t_start=0)
+    FixedTimeStepper(;num_steps::Int, Δt=1, t_start=0)
     FixedTimeStepper(t::Vector)
 
 A time stepper which gives fixed time steps. If the convenience
