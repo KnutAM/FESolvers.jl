@@ -1,6 +1,6 @@
 using FESolvers
 using Test
-import Base: @kwdef
+using LinearSolve
 
 include("testproblem.jl")
 include("TestNLSolver.jl")

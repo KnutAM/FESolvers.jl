@@ -1,14 +1,13 @@
 module FESolvers
-import Base: @kwdef # To support julia < 1.9
+
 import LinearAlgebra
-using Requires
 export solve_problem!
 
 export QuasiStaticSolver
 export LinearProblemSolver
 export NewtonSolver, SteepestDescent
 export NoLineSearch, ArmijoGoldstein
-export BackslashSolver
+export BackslashSolver, LinearSolveSolver
 export FixedTimeStepper, AdaptiveTimeStepper
 
 include("Convergence.jl")
@@ -45,14 +44,5 @@ function solve_problem!(problem, solver)
     end
 end
 
-function __init__()
-    @require(
-        LinearSolve="7ed4a6bd-45f5-4d41-b270-4a48e9bafcae",
-        (using .LinearSolve;
-        function solve_linear!(Δx, K, r, alg::Union{LinearSolve.SciMLLinearSolveAlgorithm,Nothing})
-            map!(-, Δx, solve(LinearProblem(K, copy!(Δx,r)), alg; alias_b=false).u)
-        end)
-    )
-end
 
 end
