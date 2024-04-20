@@ -120,7 +120,7 @@ function postprocess! end
 
 # Deprecated
 function postprocess!(problem, solver)
-    @warn "postprocess!(problem, step, solver) is deprecated, overload postprocess!(problem, solver) instead" maxlog=1
+    @warn "`postprocess!(problem, step, solver)` is deprecated, overload `postprocess!(problem, solver)` instead" maxlog=1
     return postprocess!(problem, get_step(solver), solver)
 end
 
@@ -134,12 +134,12 @@ Only called after the problem has converged, after `postprocess!`
 function handle_converged! end
 
 """
-    handle_notconverged!(problem)
+    handle_notconverged!(problem, solver)
 
 Optional function to make changes to the problem in case it did not converge.
 If not implemented, this defaults to a no-op.
 """
-handle_notconverged!(::Any) = nothing
+handle_notconverged!(::Any, ::Any) = nothing
 
 """
     setunknowns!(problem, x)

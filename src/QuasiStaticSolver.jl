@@ -41,7 +41,7 @@ function _solve_problem!(problem, solver::QuasiStaticSolver)
             # Reset unknowns if no convergence and,
             # potentially, try a different time step
             setunknowns!(problem, xold)                      # User function
-            handle_notconverged!(problem)                    # Optional user function
+            handle_notconverged!(problem, solver)            # Optional user function
         end                                                  # (with default implementation)
     end
 end
