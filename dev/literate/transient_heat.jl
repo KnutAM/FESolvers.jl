@@ -36,7 +36,7 @@
 # ## Commented Program
 #
 # Now we solve the problem by using Ferrite and FESolvers. 
-#md # The full program, without comments, can be found in the next [section](@ref transient_heat_equation-plain-program).
+#md # The full program, without comments, can be found in the next [section](@ref transient_heat-plain-program).
 #
 # First we load Ferrite, and some other packages we need.
 using Ferrite, SparseArrays, FESolvers
@@ -185,7 +185,8 @@ struct PostProcessing{PVD}
 end
 PostProcessing() = PostProcessing(paraview_collection("transient-heat.pvd"));
 
-function FESolvers.postprocess!(p::TransientHeat, step)
+function FESolvers.postprocess!(p::TransientHeat, solver)
+    step = FESolvers.get_step(solver)
     vtk_grid("transient-heat-$step", p.def.dh) do vtk
         vtk_point_data(vtk, p.def.dh, p.buf.u)
         vtk_save(vtk)
@@ -211,11 +212,11 @@ solver = QuasiStaticSolver(;nlsolver=LinearProblemSolver(), timestepper=FixedTim
 # Finally, we can solve the problem
 solve_problem!(problem, solver);
 
-#md # ## [Plain program](@id transient_heat_equation-plain-program)
+#md # ## [Plain program](@id transient_heat-plain-program)
 #md #
 #md # Here follows a version of the program without any comments.
 #md # The file is also available here:
-#md # [`transient_heat_equation.jl`](transient_heat_equation.jl).
+#md # [`transient_heat.jl`](transient_heat.jl).
 #md #
 #md # ```julia
 #md # @__CODE__
