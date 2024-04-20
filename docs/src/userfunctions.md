@@ -14,6 +14,7 @@ FESolvers.getresidual
 FESolvers.update_to_next_step!
 FESolvers.update_problem!
 FESolvers.handle_converged!
+FESolvers.handle_notconverged!
 FESolvers.postprocess!
 FESolvers.close_problem
 ```

@@ -53,8 +53,8 @@ end
 
 FESolvers.calculate_convergence_measure(p::TestProblem, args...) = norm(p.r)
 FESolvers.handle_converged!(p::TestProblem) = push!(p.conv, true)
-function FESolvers.postprocess!(p::TestProblem, step, solver)
-    #step = FESolvers.get_step(solver)
+function FESolvers.postprocess!(p::TestProblem, solver)
+    step = FESolvers.get_step(solver)
     step == p.throw_at_step && throw(TestError())
     push!(p.xv, copy(p.x))
     push!(p.rv, copy(p.r))

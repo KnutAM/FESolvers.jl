@@ -4,6 +4,8 @@ NewtonSolver
 FESolvers.AdaptiveNewtonSolver
 SteepestDescent
 LinearProblemSolver
+FESolvers.DynamicSolver
+FESolvers.MultiStageSolver
 ```
 
 ## Further details on selected solvers

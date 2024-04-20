@@ -110,25 +110,36 @@ the previous iteration. Note that `iter=1` implies `Δa=0`
 function calculate_convergence_measure end
 
 """
-    postprocess!(problem, step, solver)
+    postprocess!(problem, solver)
 
 Perform any postprocessing at the current time.
-Called at the beginning of the simulation, 
-and after time step converged right before `handle_converged!`.
+Called at the beginning of the simulation, and directly
+after time step converged (right before `handle_converged!`).
 """
 function postprocess! end
-#TODO: Change to postprocess!(problem, solver)
-postprocess!(problem, step, solver) = postprocess!(problem, step)
+
+# Deprecated
+function postprocess!(problem, solver)
+    @warn "postprocess!(problem, step, solver) is deprecated, overload postprocess!(problem, solver) instead" maxlog=1
+    return postprocess!(problem, get_step(solver), solver)
+end
 
 """
     handle_converged!(problem)
 
 Do necessary update operations once it is known that the 
 problem has converged. E.g., update old values to the current. 
-Only called directly after the problem has converged, 
-after `postprocess!`
+Only called after the problem has converged, after `postprocess!`
 """
 function handle_converged! end
+
+"""
+    handle_notconverged!(problem)
+
+Optional function to make changes to the problem in case it did not converge.
+If not implemented, this defaults to a no-op.
+"""
+handle_notconverged!(::Any) = nothing
 
 """
     setunknowns!(problem, x)

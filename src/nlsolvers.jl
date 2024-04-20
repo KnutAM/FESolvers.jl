@@ -96,7 +96,7 @@ get_convergence_measure(sh::SolverState, ::Colon) = view(sh.residuals, 1:sh.numi
 """
     is_converged(nlsolver)
 
-Has the `nlsolver` converged? Reset by [`reset_nlsolver!`](@ref).
+Has the `nlsolver` converged? Reset by [`reset_solver_state!`](@ref).
 """
 is_converged(nlsolver) = is_converged(get_solver_state(nlsolver))
 
@@ -143,10 +143,8 @@ end
 """
     update_solver_state!(nlsolver, problem, r)
 
-A nonlinear solver may solve information about its convergence state.
-`r` is the output from [`calculate_convergence_measure`](@ref) when 
-this function is called by the default implementation of 
-[`check_convergence_criteria`](@ref). 
+Allows nonlinear solvers to store information about its convergence state,
+`r` is the output from [`calculate_convergence_measure`](@ref). 
 """
 function update_solver_state!(nlsolver, _, r)
     update_solver_state!(get_solver_state(nlsolver), nlsolver, r)
