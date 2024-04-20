@@ -3,7 +3,7 @@
 [![Build Status](https://github.com/KnutAM/FESolvers.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/KnutAM/FESolvers.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/KnutAM/FESolvers.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/KnutAM/FESolvers.jl)
 
-Package to easily solve nonlinear problem, in particularily tailored to [Ferrite.jl](https://github.com/Ferrite-FEM/Ferrite.jl). Requires `julia v1.8` or later.
+Package to easily solve nonlinear problem, in particularily tailored to [Ferrite.jl](https://github.com/Ferrite-FEM/Ferrite.jl). Requires `julia v1.9` or later.
 
 ## Your problem - your way
 You define your own problem type, `FESolvers` 
