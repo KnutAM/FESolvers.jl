@@ -240,13 +240,11 @@ function get_linear_solver end
 
 # Top-level method to overload
 """
-    solve_nonlinear!(problem, nlsolver, last_converged)
+    solve_nonlinear!(problem, nlsolver)
 
 Solve the current time step in the nonlinear `problem`, (`r(x) = 0`),
-by using the nonlinear solver `nlsolver`. `last_converged::Bool` 
-is just for information if the last time step converged or not. 
-In many cases it suffices to overload [`calculate_update!`](@ref) 
-for a custom nonlinear solver. 
+by using the nonlinear solver `nlsolver`. In many cases, it suffices 
+to overload [`calculate_update!`](@ref) for a custom nonlinear solver. 
 """
 function solve_nonlinear!(problem, nlsolver)
     maxiter = get_max_iter(nlsolver)
