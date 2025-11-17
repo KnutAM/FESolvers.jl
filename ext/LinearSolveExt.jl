@@ -4,8 +4,8 @@ import LinearSolve
 
 FESolvers.LinearSolveSolver(K::AbstractMatrix, args...) = FESolvers.LinearSolveSolver(nothing, K, args...)
 
-function FESolvers.build_linear_solve_cache(alg::Union{LinearSolve.SciMLLinearSolveAlgorithm, Nothing}, K, r)
-    return LinearSolve.init(LinearSolve.LinearProblem(K, r), alg)
+function FESolvers.build_linear_solve_cache(alg::Union{LinearSolve.SciMLLinearSolveAlgorithm, Nothing}, K, r; kwargs...)
+    return LinearSolve.init(LinearSolve.LinearProblem(K, r), alg; kwargs...)
 end
 
 function FESolvers.solve_linear!(Δx, K, r, solver::FESolvers.LinearSolveSolver)

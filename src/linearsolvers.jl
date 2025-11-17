@@ -29,11 +29,11 @@ If not given, `LinearSolve`'s default algorithm will be used.
 struct LinearSolveSolver{C}
     cache::C
     algorithm::Symbol
-    function LinearSolveSolver(alg, K::AbstractMatrix, r::AbstractVector=zeros(eltype(K), size(K, 1)))
-        if !applicable(build_linear_solve_cache, alg, K, r)
+    function LinearSolveSolver(alg, K::AbstractMatrix, r::AbstractVector=zeros(eltype(K), size(K, 1)); kwargs...)
+        if !applicable(build_linear_solve_cache, alg, K, r; kwargs...)
             @warn "LinearSolve.jl required to use LinearSolveSolver, see the docstring"
         end
-        cache = build_linear_solve_cache(alg, K, r)
+        cache = build_linear_solve_cache(alg, K, r; kwargs...)
         algorithm = alg === nothing ? :default : nameof(typeof(alg))
         return new{typeof(cache)}(cache, algorithm)
     end
